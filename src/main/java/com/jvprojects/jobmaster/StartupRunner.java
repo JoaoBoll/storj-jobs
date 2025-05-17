@@ -1,28 +1,22 @@
 package com.jvprojects.jobmaster;
 
-import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
 import com.jvprojects.jobmaster.services.StorjNodeService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 @Component
-public class StartupRunner implements CommandLineRunner {
+public class StartupRunner {
 
     private final StorjNodeService storjNodeService;
-    private final StorjNodeRepository storjNodeRepository;
 
-    @Autowired
-    public StartupRunner(StorjNodeService storjNodeService, StorjNodeRepository storjNodeRepository) {
+    public StartupRunner(StorjNodeService storjNodeService) {
         this.storjNodeService = storjNodeService;
-        this.storjNodeRepository = storjNodeRepository;
     }
-    
-    @Override
-    public void run(String... args) {
 
+    @EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void runAfterStartup() {
+        System.out.println("🚀 Aplicação totalmente iniciada. Executando serviço...");
         storjNodeService.executeOnStart();
-        
     }
 }
 

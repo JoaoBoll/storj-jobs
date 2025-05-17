@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface StorjNodeRepository extends JpaRepository<StorjNode, Long> {
     StorjNode findByNodeId(String nodeId);
+    StorjNode findByUrl(String url);
 }

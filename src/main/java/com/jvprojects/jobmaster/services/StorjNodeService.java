@@ -32,12 +32,19 @@ public class StorjNodeService {
         List<StorjSnoDto> storjSnosList = storjSnoService.fetchStorjNodes();
 
         for (StorjSnoDto storjSnoDto : storjSnosList) {
-            if (storjNodeRepository.findByNodeId(storjSnoDto.getNodeId()) == null) {
+            StorjNode actualNode = storjNodeRepository.findByNodeId(storjSnoDto.getNodeId());
+            if (actualNode == null) {
                 StorjNode node = new StorjNode();
 
                 node.setNodeId(storjSnoDto.getNodeId());
+                node.setUrl(storjSnoDto.getUrl());
 
                 storjNodeRepository.save(node);
+            } else {
+                if (!storjSnoDto.getUrl().equals(actualNode.getUrl())) {
+                    actualNode.setUrl(storjSnoDto.getUrl());
+                    storjNodeRepository.save(actualNode);
+                }
             }
         }
 

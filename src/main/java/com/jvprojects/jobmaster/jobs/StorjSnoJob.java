@@ -1,7 +1,6 @@
-package com.jvprojects.jobmaster.jobs.storj;
+package com.jvprojects.jobmaster.jobs;
 
 import com.jvprojects.jobmaster.dto.StorjSnoDto;
-import com.jvprojects.jobmaster.entities.StorjSno;
 import com.jvprojects.jobmaster.repositories.StorjSnoRepository;
 import com.jvprojects.jobmaster.services.StorjSnoService;
 import org.quartz.DisallowConcurrentExecution;
@@ -34,23 +33,7 @@ public class StorjSnoJob implements Job {
 
         log.info("Saving data...");
 
-        for (StorjSnoDto item : itens) {
-            StorjSno storjSno = new StorjSno();
-
-            if (item.getNodeId() != null) {
-                storjSno.setNodeId(item.getNodeId());
-            }
-
-            if (item.getDiskSpace() != null) {
-                storjSno.setUsedDiskSpace(item.getDiskSpace().getUsed());
-                storjSno.setTrash(item.getDiskSpace().getTrash());
-            }
-
-            if (item.getBandwidth() != null) {
-                storjSno.setBandwidth(item.getBandwidth().getUsed());
-            }
-            storjSnoRepository.save(storjSno);
-        }
+        storjSnoService.saveAll(itens);
 
         log.info("Finished.");
     }

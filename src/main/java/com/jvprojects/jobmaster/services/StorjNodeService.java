@@ -38,7 +38,6 @@ public class StorjNodeService {
                     .anyMatch(sno -> sno.getNodeId().equals(node.getNodeId()));
 
             node.setEnabled(enabled);
-            storjNodeRepository.save(node);
         }
 
         for (StorjSnoDto storjSnoDto : storjSnosList) {
@@ -49,6 +48,7 @@ public class StorjNodeService {
                         StorjNode newStorjNode = new StorjNode();
                         newStorjNode.setNodeId(storjSnoDto.getNodeId());
                         newStorjNode.setUrl(storjSnoDto.getUrl());
+                        newStorjNode.setAvailableDiskSpace(storjSnoDto.getDiskSpace().getAvailable());
                         newStorjNode.setEnabled(true); //Assuming the new node should be enabled
                         return newStorjNode;
                     });
@@ -56,7 +56,9 @@ public class StorjNodeService {
             if (node.getId() != null) {
                 if (!storjSnoDto.getUrl().equals(node.getUrl())) {
                     node.setUrl(storjSnoDto.getUrl());
-                    storjNodeRepository.save(node);
+                }
+                if (!storjSnoDto.getDiskSpace().getAvailable().equals(node.getAvailableDiskSpace())) {
+                    node.setAvailableDiskSpace(storjSnoDto.getDiskSpace().getAvailable());
                 }
             }
             storjNodeRepository.save(node);

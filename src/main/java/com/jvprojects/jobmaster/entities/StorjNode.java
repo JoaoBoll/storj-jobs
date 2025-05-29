@@ -23,6 +23,9 @@ public class StorjNode extends BaseEntity{
     @Column
     private Boolean enabled;
 
+    @Column
+    private Long availableDiskSpace;
+
 
 }
 

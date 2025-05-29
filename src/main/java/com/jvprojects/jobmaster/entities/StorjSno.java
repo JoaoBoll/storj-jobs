@@ -25,7 +25,4 @@ public class StorjSno extends BaseEntity{
     @Column(name = "overused_disk_space")
     private Long overusedDiskSpace;
 
-    @Column(name = "available_disk_space")
-    private Long availableDiskSpace;
-
 }

@@ -75,7 +75,6 @@ public class StorjSnoService {
                 storjSno.setUsedDiskSpace(item.getDiskSpace().getUsed());
                 storjSno.setTrashDiskSpace(item.getDiskSpace().getTrash());
                 storjSno.setOverusedDiskSpace(item.getDiskSpace().getOverused());
-                storjSno.setAvailableDiskSpace(item.getDiskSpace().getAvailable());
             }
 
             if (item.getBandwidth() != null) {

@@ -16,16 +16,16 @@ public class StorjSno extends BaseEntity{
     @Column(name = "used_disk_space")
     private Long usedDiskSpace;
 
-    @Column(name = "trash")
-    private Long trash;
+    @Column(name = "trash_disk_space")
+    private Long trashDiskSpace;
 
-    @Column(name = "bandwidth")
-    private Long bandwidth;
+    @Column(name = "used_bandwidth")
+    private Long usedBandwidth;
 
-    @Column(name = "overused")
-    private Long overused;
+    @Column(name = "overused_disk_space")
+    private Long overusedDiskSpace;
 
-    @Column(name = "available")
-    private Long available;
+    @Column(name = "available_disk_space")
+    private Long availableDiskSpace;
 
 }

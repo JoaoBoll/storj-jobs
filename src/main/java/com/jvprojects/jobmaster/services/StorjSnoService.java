@@ -73,13 +73,13 @@ public class StorjSnoService {
 
             if (item.getDiskSpace() != null) {
                 storjSno.setUsedDiskSpace(item.getDiskSpace().getUsed());
-                storjSno.setTrash(item.getDiskSpace().getTrash());
-                storjSno.setOverused(item.getDiskSpace().getOverused());
-                storjSno.setAvailable(item.getDiskSpace().getAvailable());
+                storjSno.setTrashDiskSpace(item.getDiskSpace().getTrash());
+                storjSno.setOverusedDiskSpace(item.getDiskSpace().getOverused());
+                storjSno.setAvailableDiskSpace(item.getDiskSpace().getAvailable());
             }
 
             if (item.getBandwidth() != null) {
-                storjSno.setBandwidth(item.getBandwidth().getUsed());
+                storjSno.setUsedBandwidth(item.getBandwidth().getUsed());
             }
             storjSnoRepository.save(storjSno);
         }

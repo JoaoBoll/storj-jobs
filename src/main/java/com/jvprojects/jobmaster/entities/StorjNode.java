@@ -20,6 +20,9 @@ public class StorjNode extends BaseEntity{
     @OneToOne(mappedBy = "storjNode")
     private StorjSatellites storjSatellites;
 
+    @Column
+    private Boolean enabled;
+
 
 }
 

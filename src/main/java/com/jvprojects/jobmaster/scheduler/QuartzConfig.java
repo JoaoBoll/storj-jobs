@@ -1,5 +1,6 @@
 package com.jvprojects.jobmaster.scheduler;
 
+import com.jvprojects.jobmaster.jobs.StorjHourlyJob;
 import com.jvprojects.jobmaster.jobs.StorjSatellitesJob;
 import com.jvprojects.jobmaster.jobs.StorjSnoJob;
 import org.quartz.*;
@@ -12,12 +13,13 @@ import java.util.Date;
 @Configuration
 public class QuartzConfig {
 
-    /* STORJ SNO JOB (a cada 1s, com delay inicial de 10s) */
+    // Configuration for the StorjSno Job, which runs every second with an initial delay of 10 seconds.
+    // This job will execute continuously and is stored durably.
     @Bean
     public JobDetail storjSnoJobDetail() {
         return JobBuilder.newJob(StorjSnoJob.class)
                 .withIdentity("storjSnoJob")
-                .storeDurably()
+                .storeDurably() // Ensures the job remains in Quartz even if no triggers are currently attached
                 .build();
     }
 
@@ -26,12 +28,22 @@ public class QuartzConfig {
         return TriggerBuilder.newTrigger()
                 .withIdentity("storjSnoJobTrigger")
                 .forJob(storjSnoJobDetail())
-                .startAt(Date.from(Instant.now().plusSeconds(10))) // Delay de 10s
-                .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1))
+                .startAt(Date.from(Instant.now().plusSeconds(10))) // Initial delay of 10 seconds
+                .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1)) // Executes every second
                 .build();
     }
 
-    /* STORJ SATELLITES JOB (a cada 1s, com delay inicial de 10s) */
+    // Configuration for the StorjSatellites Job, which runs exactly at the start of each minute (00:00:00, 00:01:00, etc.)
+    // Initial delay of 10 seconds before the first execution
+    @Bean
+    public Trigger storjSatellitesJobTrigger() {
+        return TriggerBuilder.newTrigger()
+                .withIdentity("storjSatellitesJobTrigger")
+                .forJob(storjSatellitesJobDetail())
+                .withSchedule(CronScheduleBuilder.cronSchedule("0 * * * * ?"))
+                .build();
+    }
+
     @Bean
     public JobDetail storjSatellitesJobDetail() {
         return JobBuilder.newJob(StorjSatellitesJob.class)
@@ -40,13 +52,23 @@ public class QuartzConfig {
                 .build();
     }
 
+    // Configuration for the StorjHourly Job, which runs precisely at the start of each hour (00:00, 01:00, 02:00, etc.)
+    // The job executes according to UTC time zone to ensure global consistency.
     @Bean
-    public Trigger storjSatellitesJobTrigger() {
+    public Trigger storjHourlyJobTrigger() {
         return TriggerBuilder.newTrigger()
-                .withIdentity("storjSatellitesJobTrigger")
-                .forJob(storjSatellitesJobDetail())
-                .startAt(Date.from(Instant.now().plusSeconds(10)))
-                .withSchedule(SimpleScheduleBuilder.repeatMinutelyForever(5))
+                .withIdentity("storjHourlyJobTrigger")
+                .forJob(storjHourlyJobDetail())
+                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
                 .build();
     }
+
+    @Bean
+    public JobDetail storjHourlyJobDetail() {
+        return JobBuilder.newJob(StorjHourlyJob.class)
+                .withIdentity("storjHourlyJob")
+                .storeDurably()
+                .build();
+    }
+
 }

@@ -31,24 +31,36 @@ public class StorjNodeService {
 
         List<StorjSnoDto> storjSnosList = storjSnoService.fetchStorjNodes();
 
-        for (StorjSnoDto storjSnoDto : storjSnosList) {
-            StorjNode actualNode = storjNodeRepository.findByNodeId(storjSnoDto.getNodeId());
-            if (actualNode == null) {
-                StorjNode node = new StorjNode();
+        List<StorjNode> nodes = storjNodeRepository.findAll();
 
-                node.setNodeId(storjSnoDto.getNodeId());
-                node.setUrl(storjSnoDto.getUrl());
+        for (StorjNode node : nodes) {
+            Boolean enabled = storjSnosList.stream()
+                    .anyMatch(sno -> sno.getNodeId().equals(node.getNodeId()));
 
-                storjNodeRepository.save(node);
-            } else {
-                if (!storjSnoDto.getUrl().equals(actualNode.getUrl())) {
-                    actualNode.setUrl(storjSnoDto.getUrl());
-                    storjNodeRepository.save(actualNode);
-                }
-            }
+            node.setEnabled(enabled);
+            storjNodeRepository.save(node);
         }
 
-        log.info("Finished");
+        for (StorjSnoDto storjSnoDto : storjSnosList) {
+            StorjNode node = nodes.stream()
+                    .filter(n -> n.getNodeId().equals(storjSnoDto.getNodeId()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        StorjNode newStorjNode = new StorjNode();
+                        newStorjNode.setNodeId(storjSnoDto.getNodeId());
+                        newStorjNode.setUrl(storjSnoDto.getUrl());
+                        newStorjNode.setEnabled(true); //Assuming the new node should be enabled
+                        return newStorjNode;
+                    });
+
+            if (node.getId() != null) {
+                if (!storjSnoDto.getUrl().equals(node.getUrl())) {
+                    node.setUrl(storjSnoDto.getUrl());
+                    storjNodeRepository.save(node);
+                }
+            }
+            storjNodeRepository.save(node);
+        }
     }
 
 }

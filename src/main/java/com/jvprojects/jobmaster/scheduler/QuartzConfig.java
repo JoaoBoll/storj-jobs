@@ -16,20 +16,20 @@ public class QuartzConfig {
     // Configuration for the StorjSno Job, which runs every second with an initial delay of 10 seconds.
     // This job will execute continuously and is stored durably.
     @Bean
-    public JobDetail storjSnoJobDetail() {
-        return JobBuilder.newJob(StorjSnoJob.class)
-                .withIdentity("storjSnoJob")
-                .storeDurably() // Ensures the job remains in Quartz even if no triggers are currently attached
-                .build();
-    }
-
-    @Bean
     public Trigger storjSnoJobTrigger() {
         return TriggerBuilder.newTrigger()
                 .withIdentity("storjSnoJobTrigger")
                 .forJob(storjSnoJobDetail())
                 .startAt(Date.from(Instant.now().plusSeconds(10))) // Initial delay of 10 seconds
                 .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1)) // Executes every second
+                .build();
+    }
+
+    @Bean
+    public JobDetail storjSnoJobDetail() {
+        return JobBuilder.newJob(StorjSnoJob.class)
+                .withIdentity("storjSnoJob")
+                .storeDurably()
                 .build();
     }
 

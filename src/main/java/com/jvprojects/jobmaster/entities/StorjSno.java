@@ -22,4 +22,10 @@ public class StorjSno extends BaseEntity{
     @Column(name = "bandwidth")
     private Long bandwidth;
 
+    @Column(name = "overused")
+    private Long overused;
+
+    @Column(name = "available")
+    private Long available;
+
 }

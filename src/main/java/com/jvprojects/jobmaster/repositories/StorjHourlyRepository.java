@@ -1,4 +1,4 @@
 package com.jvprojects.jobmaster.repositories;
 
-public class StorjHourlyRepository {
+public interface StorjHourlyRepository {
 }

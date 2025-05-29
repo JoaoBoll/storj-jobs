@@ -68,11 +68,11 @@ public class StorjSatellitesService {
 
             StorjNode storjNode = storjNodeRepository.findByUrl(item.getUlr());
 
-            StorjSatellites satellites = storjSatellitesRepository.findByStorjNodeId(storjNode.getId());
+            StorjSatellites satellite = storjSatellitesRepository.findByStorjNodeId(storjNode.getId());
 
-            if (satellites == null) {
-                satellites = new StorjSatellites();
-                satellites.setStorjNode(storjNode);
+            if (satellite == null) {
+                satellite = new StorjSatellites();
+                satellite.setStorjNode(storjNode);
             }
 
             //StorageDaily
@@ -85,12 +85,12 @@ public class StorjSatellitesService {
                 storageDaily.setAtRestTotalBytes(daily.getAtRestTotalBytes());
                 storageDaily.setIntervalStart(OffsetDateTime.parse(daily.getIntervalStart()));
 
-                storageDaily.setStorjSatellite(satellites);
+                storageDaily.setStorjSatellite(satellite);
 
                 storageDailyList.add(storageDaily);
             }
 
-            satellites.setStorageDaily(storageDailyList);
+            satellite.setStorageDaily(storageDailyList);
 
             //BandwidthDaily
             List<BandwidthDaily> bandwidthDailyList = new ArrayList<>();
@@ -98,11 +98,11 @@ public class StorjSatellitesService {
             for (StorjSatellitesDto.BandwidthDaily band : item.getBandwidthDaily()) {
                 BandwidthDaily bandwidthDaily = new BandwidthDaily(band);
 
-                bandwidthDaily.setStorjSatellite(satellites);
+                bandwidthDaily.setStorjSatellite(satellite);
                 bandwidthDailyList.add(bandwidthDaily);
             }
 
-            satellites.setBandwidthDaily(bandwidthDailyList);
+            satellite.setBandwidthDaily(bandwidthDailyList);
 
             //Audits
             List<Audits> audits = new ArrayList<>();
@@ -110,20 +110,20 @@ public class StorjSatellitesService {
             for (StorjSatellitesDto.Audit audit : item.getAudits()) {
                 Audits aud =  new Audits(audit);
 
-                aud.setStorjSatellite(satellites);
+                aud.setStorjSatellite(satellite);
                 audits.add(aud);
             }
 
-            satellites.setAudits(audits);
+            satellite.setAudits(audits);
 
-            satellites.setStorageSummary(item.getStorageSummary());
-            satellites.setAverageUsageBytes(item.getAverageUsageBytes());
-            satellites.setBandwidthSummary(item.getBandwidthSummary());
-            satellites.setEgressSummary(item.getEgressSummary());
-            satellites.setIngressSummary(item.getIngressSummary());
-            satellites.setEarliestJoinedAt(OffsetDateTime.parse(item.getEarliestJoinedAt()));
+            satellite.setStorageSummary(item.getStorageSummary());
+            satellite.setAverageUsageBytes(item.getAverageUsageBytes());
+            satellite.setBandwidthSummary(item.getBandwidthSummary());
+            satellite.setEgressSummary(item.getEgressSummary());
+            satellite.setIngressSummary(item.getIngressSummary());
+            satellite.setEarliestJoinedAt(OffsetDateTime.parse(item.getEarliestJoinedAt()));
 
-            storjSatellitesRepository.save(satellites);
+            storjSatellitesRepository.save(satellite);
         }
 
     }

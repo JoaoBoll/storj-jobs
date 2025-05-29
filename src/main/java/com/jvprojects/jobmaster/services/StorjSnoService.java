@@ -31,6 +31,13 @@ public class StorjSnoService {
         this.urls = configurations.getUrls();
     }
 
+    public void runJob() {
+
+        List<StorjSnoDto> items = fetchStorjNodes();
+        saveAll(items);
+
+    }
+
     public List<StorjSnoDto> fetchStorjNodes() {
         log.info("Fetching Storj Satellites data...");
         List<CompletableFuture<StorjSnoDto>> futures = urls.stream()
@@ -67,6 +74,8 @@ public class StorjSnoService {
             if (item.getDiskSpace() != null) {
                 storjSno.setUsedDiskSpace(item.getDiskSpace().getUsed());
                 storjSno.setTrash(item.getDiskSpace().getTrash());
+                storjSno.setOverused(item.getDiskSpace().getOverused());
+                storjSno.setAvailable(item.getDiskSpace().getAvailable());
             }
 
             if (item.getBandwidth() != null) {

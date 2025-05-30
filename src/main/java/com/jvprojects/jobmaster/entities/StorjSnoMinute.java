@@ -25,7 +25,10 @@ public class StorjSnoMinute extends BaseEntity{
     @Column(name = "overused_disk_space")
     private Long overusedDiskSpace;
 
-    @Column(name = "available_disk_space")
-    private Long availableDiskSpace;
+    @Column(name = "total_used_bandwidth")
+    private Long totalUsedBandwidth;
+
+    @Column(name = "total_consume_bandwidth_per_second")
+    private Long totalConsumeBandwidthPerSecond;
 
 }

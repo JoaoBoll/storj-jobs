@@ -22,7 +22,9 @@ public abstract class BaseEntity {
 
     @PrePersist
     public void prePersist() {
-        this.createdAt = OffsetDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = OffsetDateTime.now();
+        }
     }
 
     @PreUpdate

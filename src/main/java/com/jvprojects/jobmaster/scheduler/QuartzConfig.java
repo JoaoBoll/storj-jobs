@@ -3,6 +3,7 @@ package com.jvprojects.jobmaster.scheduler;
 import com.jvprojects.jobmaster.jobs.StorjHourlyJob;
 import com.jvprojects.jobmaster.jobs.StorjSatellitesJob;
 import com.jvprojects.jobmaster.jobs.StorjSnoJob;
+import com.jvprojects.jobmaster.jobs.StorjSnoMinuteJob;
 import org.quartz.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,6 +49,24 @@ public class QuartzConfig {
     public JobDetail storjSatellitesJobDetail() {
         return JobBuilder.newJob(StorjSatellitesJob.class)
                 .withIdentity("storjSatellitesJob")
+                .storeDurably()
+                .build();
+    }
+
+    // Configuration for the StorjSnoMinuteJob Job, which runs exactly at the start of each minute (00:00:00, 00:01:00, etc.)
+    @Bean
+    public Trigger storjSnoMinuteJobTrigger() {
+        return TriggerBuilder.newTrigger()
+                .withIdentity("storjSnoMinuteJobTrigger")
+                .forJob(storjSnoMinuteJobDetail())
+                .withSchedule(CronScheduleBuilder.cronSchedule("0 * * * * ?"))
+                .build();
+    }
+
+    @Bean
+    public JobDetail storjSnoMinuteJobDetail() {
+        return JobBuilder.newJob(StorjSnoMinuteJob.class)
+                .withIdentity("storjSnoMinuteJob")
                 .storeDurably()
                 .build();
     }

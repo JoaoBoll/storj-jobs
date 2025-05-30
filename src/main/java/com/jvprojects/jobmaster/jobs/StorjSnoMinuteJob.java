@@ -21,7 +21,7 @@ public class StorjSnoMinuteJob implements Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
-        log.info("Searching for Storj Node Operators (SNO)...");
+        log.info("Running Storj SNO Minute job...");
 
         storjSnoMinuteService.runJob();
 

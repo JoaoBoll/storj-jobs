@@ -15,8 +15,8 @@ public class StartupRunner {
 
     @EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void runAfterStartup() {
-        System.out.println("🚀 Aplicação totalmente iniciada. Executando serviço...");
         storjNodeService.executeOnStart();
+        System.out.println("🚀 Aplicação totalmente iniciada. Executando serviço...");
     }
 }
 

@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -64,9 +66,15 @@ public class StorjSnoService {
     }
 
     public void saveAll(List<StorjSnoDto> itens) {
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        log.info("Current time in UTC: " + now);
+
         for (StorjSnoDto item : itens) {
             StorjSno storjSno = new StorjSno();
 
+            storjSno.setCreatedAt(now);
             if (item.getNodeId() != null) {
                 storjSno.setNodeId(item.getNodeId());
             }

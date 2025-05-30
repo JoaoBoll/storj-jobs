@@ -1,18 +1,17 @@
 package com.jvprojects.jobmaster.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jvprojects.jobmaster.config.Configurations;
-import com.jvprojects.jobmaster.dto.StorjSnoDto;
+import com.jvprojects.jobmaster.entities.StorjNode;
 import com.jvprojects.jobmaster.entities.StorjSno;
+import com.jvprojects.jobmaster.entities.StorjSnoMinute;
+import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
+import com.jvprojects.jobmaster.repositories.StorjSnoMinuteRepository;
 import com.jvprojects.jobmaster.repositories.StorjSnoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
+import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 public class StorjSnoMinuteService {
@@ -20,67 +19,52 @@ public class StorjSnoMinuteService {
     private static final Logger log = LoggerFactory.getLogger(StorjSnoMinuteService.class);
 
     private final StorjSnoRepository storjSnoRepository;
-    private final Configurations configurations;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final List<String> urls;
+    private final StorjSnoMinuteRepository storjSnoMinuteRepository;
+    private final StorjNodeRepository storjNodeRepository;
 
-    public StorjSnoMinuteService(StorjSnoRepository storjSnoRepository, Configurations configurations) {
+    public StorjSnoMinuteService(StorjSnoRepository storjSnoRepository, StorjSnoMinuteRepository storjSnoMinuteRepository, StorjNodeRepository storjNodeRepository) {
         this.storjSnoRepository = storjSnoRepository;
-        this.configurations = configurations;
-        this.urls = configurations.getUrls();
+        this.storjSnoMinuteRepository = storjSnoMinuteRepository;
+        this.storjNodeRepository = storjNodeRepository;
     }
 
     public void runJob() {
 
-        List<StorjSnoDto> items = fetchStorjNodes();
-        saveAll(items);
+        OffsetDateTime now = OffsetDateTime.now();
 
-    }
+        OffsetDateTime startTime = now.minusMinutes(1)
+                .withSecond(0)
+                .withNano(0);
 
-    public List<StorjSnoDto> fetchStorjNodes() {
-        log.info("Fetching Storj Satellites data...");
-        List<CompletableFuture<StorjSnoDto>> futures = urls.stream()
-                .map(url -> CompletableFuture.supplyAsync(() -> consultNode(url)))
-                .collect(Collectors.toList());
+        OffsetDateTime endTime = now.withSecond(0)
+                .withNano(0);
 
-        return futures.stream()
-                .map(CompletableFuture::join)
-                .filter(dto -> dto != null)
-                .collect(Collectors.toList());
-    }
+        List<StorjNode> storjNodes = storjNodeRepository.findAllByEnabledIsTrue();
 
-    private StorjSnoDto consultNode(String url) {
-        try {
-            String json = restTemplate.getForObject(url + "/api/sno/", String.class);
-            StorjSnoDto dto = objectMapper.readValue(json, StorjSnoDto.class);
-            dto.setUrl(url);
-            log.info("✅ Success: {}", url);
-            return dto;
-        } catch (Exception e) {
-            log.error("❌ Fail {}: {}", url, e.getMessage(), e);
-            return null;
-        }
-    }
+        for (StorjNode storjNode : storjNodes) {
 
-    public void saveAll(List<StorjSnoDto> itens) {
-        for (StorjSnoDto item : itens) {
-            StorjSno storjSno = new StorjSno();
+            StorjSno first = storjSnoRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(storjNode.getNodeId(), startTime, endTime);
+            StorjSno last = storjSnoRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(storjNode.getNodeId(), startTime, endTime);
 
-            if (item.getNodeId() != null) {
-                storjSno.setNodeId(item.getNodeId());
+            Long durationInSeconds = java.time.Duration.between(first.getCreatedAt(), last.getCreatedAt()).getSeconds();
+
+            if (!first.getId().equals(last.getId()) && first.getUsedBandwidth() != null
+                    && last.getUsedBandwidth() != null && durationInSeconds != null) {
+
+                Long totalUsedBandwidth = last.getUsedBandwidth() - first.getUsedBandwidth();
+                Long totalConsumeBandwidthPerSecond = totalUsedBandwidth / durationInSeconds;
+
+                StorjSnoMinute minute = new StorjSnoMinute();
+                minute.setNodeId(last.getNodeId());
+                minute.setUsedDiskSpace(last.getUsedDiskSpace());
+                minute.setTrashDiskSpace(last.getTrashDiskSpace());
+                minute.setUsedBandwidth(last.getUsedBandwidth());
+                minute.setOverusedDiskSpace(last.getOverusedDiskSpace());
+                minute.setTotalUsedBandwidth(totalUsedBandwidth);
+                minute.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
+
+                storjSnoMinuteRepository.save(minute);
             }
-
-            if (item.getDiskSpace() != null) {
-                storjSno.setUsedDiskSpace(item.getDiskSpace().getUsed());
-                storjSno.setTrashDiskSpace(item.getDiskSpace().getTrash());
-                storjSno.setOverusedDiskSpace(item.getDiskSpace().getOverused());
-            }
-
-            if (item.getBandwidth() != null) {
-                storjSno.setUsedBandwidth(item.getBandwidth().getUsed());
-            }
-            storjSnoRepository.save(storjSno);
         }
     }
 }

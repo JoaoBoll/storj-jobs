@@ -4,11 +4,11 @@ FROM maven:3.9.5-eclipse-temurin-21
 
 WORKDIR /app
 
-COPY pom.xml .
+COPY backend/pom.xml .
 
 RUN mvn dependency:go-offline
 
-COPY src ./src
+COPY backend/src ./src
 
 COPY .git ./git
 

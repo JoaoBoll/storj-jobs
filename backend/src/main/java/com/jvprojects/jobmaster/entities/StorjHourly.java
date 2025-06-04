@@ -1,5 +1,6 @@
 package com.jvprojects.jobmaster.entities;
 
+import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -10,7 +11,7 @@ import java.util.List;
 @Data
 //@Entity
 //@Table(name = "storj_hour")
-public class StorjHourly extends BaseEntity{
+public class StorjHourly extends BaseEntity {
 
     @OneToOne
     @JoinColumn(name = "storj_node_id", nullable = false)

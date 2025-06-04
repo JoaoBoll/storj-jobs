@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jvprojects.jobmaster.config.Configurations;
 import com.jvprojects.jobmaster.dto.StorjSnoDto;
 import com.jvprojects.jobmaster.entities.StorjSno;
-import com.jvprojects.jobmaster.repositories.StorjSnoRepository;
+import com.jvprojects.jobmaster.repositories.StorjSnoSecondsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,14 +21,14 @@ public class StorjSnoService {
 
     private static final Logger log = LoggerFactory.getLogger(StorjSnoService.class);
 
-    private final StorjSnoRepository storjSnoRepository;
+    private final StorjSnoSecondsRepository storjSnoSecondsRepository;
     private final Configurations configurations;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
     private final List<String> urls;
 
-    public StorjSnoService(StorjSnoRepository storjSnoRepository,Configurations configurations) {
-        this.storjSnoRepository = storjSnoRepository;
+    public StorjSnoService(StorjSnoSecondsRepository storjSnoSecondsRepository, Configurations configurations) {
+        this.storjSnoSecondsRepository = storjSnoSecondsRepository;
         this.configurations = configurations;
         this.urls = configurations.getUrls();
     }
@@ -88,7 +88,7 @@ public class StorjSnoService {
             if (item.getBandwidth() != null) {
                 storjSno.setUsedBandwidth(item.getBandwidth().getUsed());
             }
-            storjSnoRepository.save(storjSno);
+            storjSnoSecondsRepository.save(storjSno);
         }
     }
 }

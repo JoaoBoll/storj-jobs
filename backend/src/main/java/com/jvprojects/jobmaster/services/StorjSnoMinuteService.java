@@ -2,10 +2,10 @@ package com.jvprojects.jobmaster.services;
 
 import com.jvprojects.jobmaster.entities.StorjNode;
 import com.jvprojects.jobmaster.entities.StorjSno;
-import com.jvprojects.jobmaster.entities.StorjSnoMinute;
+import com.jvprojects.jobmaster.entities.StorjSnoMinutes;
 import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
-import com.jvprojects.jobmaster.repositories.StorjSnoMinuteRepository;
-import com.jvprojects.jobmaster.repositories.StorjSnoRepository;
+import com.jvprojects.jobmaster.repositories.StorjSnoMinutesRepository;
+import com.jvprojects.jobmaster.repositories.StorjSnoSecondsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,13 +18,13 @@ public class StorjSnoMinuteService {
 
     private static final Logger log = LoggerFactory.getLogger(StorjSnoMinuteService.class);
 
-    private final StorjSnoRepository storjSnoRepository;
-    private final StorjSnoMinuteRepository storjSnoMinuteRepository;
+    private final StorjSnoSecondsRepository storjSnoSecondsRepository;
+    private final StorjSnoMinutesRepository storjSnoMinutesRepository;
     private final StorjNodeRepository storjNodeRepository;
 
-    public StorjSnoMinuteService(StorjSnoRepository storjSnoRepository, StorjSnoMinuteRepository storjSnoMinuteRepository, StorjNodeRepository storjNodeRepository) {
-        this.storjSnoRepository = storjSnoRepository;
-        this.storjSnoMinuteRepository = storjSnoMinuteRepository;
+    public StorjSnoMinuteService(StorjSnoSecondsRepository storjSnoSecondsRepository, StorjSnoMinutesRepository storjSnoMinutesRepository, StorjNodeRepository storjNodeRepository) {
+        this.storjSnoSecondsRepository = storjSnoSecondsRepository;
+        this.storjSnoMinutesRepository = storjSnoMinutesRepository;
         this.storjNodeRepository = storjNodeRepository;
     }
 
@@ -43,8 +43,8 @@ public class StorjSnoMinuteService {
 
         for (StorjNode storjNode : storjNodes) {
 
-            StorjSno first = storjSnoRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(storjNode.getNodeId(), startTime, endTime);
-            StorjSno last = storjSnoRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(storjNode.getNodeId(), startTime, endTime);
+            StorjSno first = storjSnoSecondsRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(storjNode.getNodeId(), startTime, endTime);
+            StorjSno last = storjSnoSecondsRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(storjNode.getNodeId(), startTime, endTime);
 
             Long durationInSeconds = java.time.Duration.between(first.getCreatedAt(), last.getCreatedAt()).getSeconds();
 
@@ -54,7 +54,7 @@ public class StorjSnoMinuteService {
                 Long totalUsedBandwidth = last.getUsedBandwidth() - first.getUsedBandwidth();
                 Long totalConsumeBandwidthPerSecond = totalUsedBandwidth / durationInSeconds;
 
-                StorjSnoMinute minute = new StorjSnoMinute();
+                StorjSnoMinutes minute = new StorjSnoMinutes();
                 minute.setNodeId(last.getNodeId());
                 minute.setUsedDiskSpace(last.getUsedDiskSpace());
                 minute.setTrashDiskSpace(last.getTrashDiskSpace());
@@ -63,7 +63,7 @@ public class StorjSnoMinuteService {
                 minute.setTotalUsedBandwidth(totalUsedBandwidth);
                 minute.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
 
-                storjSnoMinuteRepository.save(minute);
+                storjSnoMinutesRepository.save(minute);
             }
         }
     }

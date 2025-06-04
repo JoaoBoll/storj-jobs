@@ -1,6 +1,7 @@
 package com.jvprojects.jobmaster.entities;
 
 import com.jvprojects.jobmaster.dto.StorjSatellitesDto;
+import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -9,7 +10,7 @@ import java.math.BigDecimal;
 @Data
 @Entity
 @Table(name = "audits")
-public class Audits extends BaseEntity{
+public class Audits extends BaseEntity {
 
     @Column(name = "audit_score")
     private BigDecimal auditScore;

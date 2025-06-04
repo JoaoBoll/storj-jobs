@@ -8,8 +8,8 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "storj_sno")
-public class StorjSno extends BaseEntity {
+@Table(name = "storj_sno_minute")
+public class StorjSnoMinutes extends BaseEntity {
 
     @Column(name = "node_id")
     private String nodeId;
@@ -25,5 +25,11 @@ public class StorjSno extends BaseEntity {
 
     @Column(name = "overused_disk_space")
     private Long overusedDiskSpace;
+
+    @Column(name = "total_used_bandwidth")
+    private Long totalUsedBandwidth;
+
+    @Column(name = "total_consume_bandwidth_per_second")
+    private Long totalConsumeBandwidthPerSecond;
 
 }

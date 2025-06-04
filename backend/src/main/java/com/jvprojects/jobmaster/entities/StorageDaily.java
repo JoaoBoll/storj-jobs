@@ -1,5 +1,6 @@
 package com.jvprojects.jobmaster.entities;
 
+import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -8,7 +9,7 @@ import java.time.OffsetDateTime;
 @Data
 @Entity
 @Table(name = "storage_daily")
-public class StorageDaily extends BaseEntity{
+public class StorageDaily extends BaseEntity {
 
     @Column(name = "at_rest_total")
     private Long atRestTotal;

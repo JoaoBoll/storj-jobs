@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.time.OffsetDateTime;
 
 @Repository
-public interface StorjSnoRepository extends JpaRepository<StorjSno, Long> {
+public interface StorjSnoSecondsRepository extends JpaRepository<StorjSno, Long> {
     StorjSno findByNodeId(String nodeId);
 
     Long countByNodeIdAndCreatedAtBetween(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);

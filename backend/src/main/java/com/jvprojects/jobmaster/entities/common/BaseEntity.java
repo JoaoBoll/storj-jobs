@@ -1,4 +1,4 @@
-package com.jvprojects.jobmaster.entities;
+package com.jvprojects.jobmaster.entities.common;
 
 import jakarta.persistence.*;
 import lombok.Data;

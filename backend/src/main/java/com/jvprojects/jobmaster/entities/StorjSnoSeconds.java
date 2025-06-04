@@ -1,5 +1,6 @@
 package com.jvprojects.jobmaster.entities;
 
+import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -7,8 +8,8 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "storj_sno_minute")
-public class StorjSnoMinute extends BaseEntity{
+@Table(name = "storj_sno")
+public class StorjSnoSeconds extends BaseEntity {
 
     @Column(name = "node_id")
     private String nodeId;
@@ -24,11 +25,5 @@ public class StorjSnoMinute extends BaseEntity{
 
     @Column(name = "overused_disk_space")
     private Long overusedDiskSpace;
-
-    @Column(name = "total_used_bandwidth")
-    private Long totalUsedBandwidth;
-
-    @Column(name = "total_consume_bandwidth_per_second")
-    private Long totalConsumeBandwidthPerSecond;
 
 }

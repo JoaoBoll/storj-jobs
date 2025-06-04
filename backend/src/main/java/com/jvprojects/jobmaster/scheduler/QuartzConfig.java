@@ -8,21 +8,17 @@ import org.quartz.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.Instant;
-import java.util.Date;
-
 @Configuration
 public class QuartzConfig {
 
-    // Configuration for the StorjSno Job, which runs every second with an initial delay of 10 seconds.
+    // Configuration for the StorjSno Job, which runs every 5 second with an initial delay of 10 seconds.
     // This job will execute continuously and is stored durably.
     @Bean
     public Trigger storjSnoJobTrigger() {
         return TriggerBuilder.newTrigger()
                 .withIdentity("storjSnoJobTrigger")
                 .forJob(storjSnoJobDetail())
-                .startAt(Date.from(Instant.now().plusSeconds(10))) // Initial delay of 10 seconds
-                .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1)) // Executes every second
+                .withSchedule(CronScheduleBuilder.cronSchedule("0,5,10,15,20,25,30,35,40,45,50,55 * * * * ?"))
                 .build();
     }
 

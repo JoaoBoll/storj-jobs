@@ -1,5 +1,6 @@
 package com.jvprojects.jobmaster.entities;
 
+import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToOne;
@@ -9,7 +10,7 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "storj_node")
-public class StorjNode extends BaseEntity{
+public class StorjNode extends BaseEntity {
 
     @Column
     private String nodeId;

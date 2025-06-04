@@ -1,6 +1,7 @@
 package com.jvprojects.jobmaster.entities;
 
 import com.jvprojects.jobmaster.dto.StorjSatellitesDto;
+import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -9,7 +10,7 @@ import java.time.OffsetDateTime;
 @Data
 @Entity
 @Table(name = "bandwidth_daily")
-public class BandwidthDaily extends BaseEntity{
+public class BandwidthDaily extends BaseEntity {
 
     @Column(name = "egress_repair")
     private Long egressRepair;

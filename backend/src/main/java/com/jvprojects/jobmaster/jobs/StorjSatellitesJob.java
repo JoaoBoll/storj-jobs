@@ -1,7 +1,7 @@
 package com.jvprojects.jobmaster.jobs;
 
 import com.jvprojects.jobmaster.dto.StorjSatellitesDto;
-import com.jvprojects.jobmaster.repositories.StorjSnoRepository;
+import com.jvprojects.jobmaster.repositories.StorjSnoSecondsRepository;
 import com.jvprojects.jobmaster.services.StorjSatellitesService;
 import com.jvprojects.jobmaster.services.StorjSnoService;
 import org.quartz.DisallowConcurrentExecution;
@@ -19,11 +19,11 @@ public class StorjSatellitesJob implements Job {
     private static final Logger log = LoggerFactory.getLogger(StorjSnoService.class);
 
     private final StorjSatellitesService storjSatellitesService;
-    private final StorjSnoRepository storjSnoRepository;
+    private final StorjSnoSecondsRepository storjSnoSecondsRepository;
 
-    public StorjSatellitesJob(StorjSatellitesService storjSatellitesService, StorjSnoRepository storjSnoRepository) {
+    public StorjSatellitesJob(StorjSatellitesService storjSatellitesService, StorjSnoSecondsRepository storjSnoSecondsRepository) {
         this.storjSatellitesService = storjSatellitesService;
-        this.storjSnoRepository = storjSnoRepository;
+        this.storjSnoSecondsRepository = storjSnoSecondsRepository;
     }
 
     @Override

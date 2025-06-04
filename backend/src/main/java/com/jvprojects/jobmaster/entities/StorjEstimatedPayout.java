@@ -1,5 +1,6 @@
 package com.jvprojects.jobmaster.entities;
 
+import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -8,7 +9,7 @@ import java.math.BigDecimal;
 @Data
 @Entity
 @Table(name = "storj_estimated_payout")
-public class StorjEstimatedPayout extends BaseEntity{
+public class StorjEstimatedPayout extends BaseEntity {
 
     @OneToOne(mappedBy = "storjEstimatedPayout")
     @JoinColumn(name = "current_month_id", referencedColumnName = "id")

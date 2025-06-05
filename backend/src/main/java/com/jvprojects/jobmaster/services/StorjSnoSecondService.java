@@ -3,8 +3,8 @@ package com.jvprojects.jobmaster.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jvprojects.jobmaster.config.Configurations;
 import com.jvprojects.jobmaster.dto.StorjSnoDto;
-import com.jvprojects.jobmaster.entities.StorjSno;
-import com.jvprojects.jobmaster.repositories.StorjSnoSecondsRepository;
+import com.jvprojects.jobmaster.entities.StorjSnoSecond;
+import com.jvprojects.jobmaster.repositories.StorjSnoSecondRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,18 +17,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
-public class StorjSnoService {
+public class StorjSnoSecondService {
 
-    private static final Logger log = LoggerFactory.getLogger(StorjSnoService.class);
+    private static final Logger log = LoggerFactory.getLogger(StorjSnoSecondService.class);
 
-    private final StorjSnoSecondsRepository storjSnoSecondsRepository;
+    private final StorjSnoSecondRepository storjSnoSecondRepository;
     private final Configurations configurations;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
     private final List<String> urls;
 
-    public StorjSnoService(StorjSnoSecondsRepository storjSnoSecondsRepository, Configurations configurations) {
-        this.storjSnoSecondsRepository = storjSnoSecondsRepository;
+    public StorjSnoSecondService(StorjSnoSecondRepository storjSnoSecondRepository, Configurations configurations) {
+        this.storjSnoSecondRepository = storjSnoSecondRepository;
         this.configurations = configurations;
         this.urls = configurations.getUrls();
     }
@@ -72,23 +72,23 @@ public class StorjSnoService {
         log.info("Current time in UTC: " + now);
 
         for (StorjSnoDto item : itens) {
-            StorjSno storjSno = new StorjSno();
+            StorjSnoSecond second = new StorjSnoSecond();
 
-            storjSno.setCreatedAt(now);
+            second.setCreatedAt(now);
             if (item.getNodeId() != null) {
-                storjSno.setNodeId(item.getNodeId());
+                second.setNodeId(item.getNodeId());
             }
 
             if (item.getDiskSpace() != null) {
-                storjSno.setUsedDiskSpace(item.getDiskSpace().getUsed());
-                storjSno.setTrashDiskSpace(item.getDiskSpace().getTrash());
-                storjSno.setOverusedDiskSpace(item.getDiskSpace().getOverused());
+                second.setUsedDiskSpace(item.getDiskSpace().getUsed());
+                second.setTrashDiskSpace(item.getDiskSpace().getTrash());
+                second.setOverusedDiskSpace(item.getDiskSpace().getOverused());
             }
 
             if (item.getBandwidth() != null) {
-                storjSno.setUsedBandwidth(item.getBandwidth().getUsed());
+                second.setUsedBandwidth(item.getBandwidth().getUsed());
             }
-            storjSnoSecondsRepository.save(storjSno);
+            storjSnoSecondRepository.save(second);
         }
     }
 }

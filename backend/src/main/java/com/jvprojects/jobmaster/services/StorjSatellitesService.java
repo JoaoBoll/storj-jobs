@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Service
 public class StorjSatellitesService {
 
-    private static final Logger log = LoggerFactory.getLogger(StorjSnoService.class);
+    private static final Logger log = LoggerFactory.getLogger(StorjSnoSecondService.class);
 
     private final Configurations configurations;
     private final ObjectMapper objectMapper = new ObjectMapper();

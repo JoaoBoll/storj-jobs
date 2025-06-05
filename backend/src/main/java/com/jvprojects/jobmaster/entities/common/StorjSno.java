@@ -1,14 +1,11 @@
-package com.jvprojects.jobmaster.entities;
+package com.jvprojects.jobmaster.entities.common;
 
-import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.MappedSuperclass;
 import lombok.Data;
 
 @Data
-@Entity
-@Table(name = "storj_sno")
+@MappedSuperclass
 public class StorjSno extends BaseEntity {
 
     @Column(name = "node_id")

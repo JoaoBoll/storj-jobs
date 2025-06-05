@@ -13,15 +13,15 @@ import java.util.List;
 @Service
 public class StorjNodeService {
 
-    private static final Logger log = LoggerFactory.getLogger(StorjSnoService.class);
-    private StorjSnoService storjSnoService;
+    private static final Logger log = LoggerFactory.getLogger(StorjSnoSecondService.class);
+    private StorjSnoSecondService storjSnoSecondService;
     private StorjNodeRepository storjNodeRepository;
     private final Configurations configurations;
     private final List<String> urls;
 
-    public StorjNodeService(Configurations configurations, StorjSnoService storjSnoService, StorjNodeRepository storjNodeRepository) {
+    public StorjNodeService(Configurations configurations, StorjSnoSecondService storjSnoSecondService, StorjNodeRepository storjNodeRepository) {
         this.configurations = configurations;
-        this.storjSnoService = storjSnoService;
+        this.storjSnoSecondService = storjSnoSecondService;
         this.storjNodeRepository = storjNodeRepository;
         this.urls = configurations.getUrls();
     }
@@ -29,7 +29,7 @@ public class StorjNodeService {
     public void executeOnStart() {
         log.info("Runnist startup task...");
 
-        List<StorjSnoDto> storjSnosList = storjSnoService.fetchStorjNodes();
+        List<StorjSnoDto> storjSnosList = storjSnoSecondService.fetchStorjNodes();
 
         List<StorjNode> nodes = storjNodeRepository.findAll();
 

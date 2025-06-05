@@ -1,6 +1,5 @@
 package com.jvprojects.jobmaster.jobs;
 
-import com.jvprojects.jobmaster.services.StorjHourService;
 import com.jvprojects.jobmaster.services.StorjSnoSecondService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -10,23 +9,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @DisallowConcurrentExecution
-public class StorjHourlyJob implements Job {
+public class StorjSnoSecondJob implements Job {
 
     private static final Logger log = LoggerFactory.getLogger(StorjSnoSecondService.class);
 
-    private final StorjHourService storjHourService;
+    private final StorjSnoSecondService storjSnoSecondService;
 
-    public StorjHourlyJob(StorjHourService storjHourService) {
-        this.storjHourService = storjHourService;
+    public StorjSnoSecondJob(StorjSnoSecondService storjSnoSecondService) {
+        this.storjSnoSecondService = storjSnoSecondService;
     }
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
-        log.info("Performing Hourly Job...");
+        log.info("Running Storj SNO Second job...");
 
-        storjHourService.processJob();
+        storjSnoSecondService.runJob();
 
         log.info("Finished.");
     }
-
 }

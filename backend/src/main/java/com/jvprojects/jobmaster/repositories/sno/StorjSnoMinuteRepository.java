@@ -1,4 +1,4 @@
-package com.jvprojects.jobmaster.repositories;
+package com.jvprojects.jobmaster.repositories.sno;
 
 import com.jvprojects.jobmaster.entities.StorjSnoMinute;
 import com.jvprojects.jobmaster.entities.common.StorjSno;

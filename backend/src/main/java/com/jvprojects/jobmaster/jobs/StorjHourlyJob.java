@@ -1,7 +1,7 @@
 package com.jvprojects.jobmaster.jobs;
 
 import com.jvprojects.jobmaster.services.StorjHourService;
-import com.jvprojects.jobmaster.services.StorjSnoSecondService;
+import com.jvprojects.jobmaster.services.sno.StorjSnoSecondService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;

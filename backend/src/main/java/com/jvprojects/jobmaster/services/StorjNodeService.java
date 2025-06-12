@@ -4,6 +4,7 @@ import com.jvprojects.jobmaster.config.Configurations;
 import com.jvprojects.jobmaster.dto.StorjSnoDto;
 import com.jvprojects.jobmaster.entities.StorjNode;
 import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
+import com.jvprojects.jobmaster.services.sno.StorjSnoSecondService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

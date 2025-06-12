@@ -1,12 +1,11 @@
-package com.jvprojects.jobmaster.services;
+package com.jvprojects.jobmaster.services.sno;
 
 import com.jvprojects.jobmaster.entities.StorjNode;
 import com.jvprojects.jobmaster.entities.StorjSnoDay;
 import com.jvprojects.jobmaster.entities.StorjSnoHour;
-import com.jvprojects.jobmaster.entities.common.StorjSno;
 import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
-import com.jvprojects.jobmaster.repositories.StorjSnoDayRepository;
-import com.jvprojects.jobmaster.repositories.StorjSnoHourRepository;
+import com.jvprojects.jobmaster.repositories.sno.StorjSnoDayRepository;
+import com.jvprojects.jobmaster.repositories.sno.StorjSnoHourRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

@@ -1,10 +1,10 @@
-package com.jvprojects.jobmaster.services;
+package com.jvprojects.jobmaster.services.sno;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jvprojects.jobmaster.config.Configurations;
 import com.jvprojects.jobmaster.dto.StorjSnoDto;
 import com.jvprojects.jobmaster.entities.StorjSnoSecond;
-import com.jvprojects.jobmaster.repositories.StorjSnoSecondRepository;
+import com.jvprojects.jobmaster.repositories.sno.StorjSnoSecondRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

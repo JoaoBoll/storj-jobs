@@ -1,6 +1,6 @@
 package com.jvprojects.jobmaster.resources;
 
-import com.jvprojects.jobmaster.services.*;
+import com.jvprojects.jobmaster.services.sno.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

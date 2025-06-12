@@ -1,6 +1,6 @@
-package com.jvprojects.jobmaster.jobs;
+package com.jvprojects.jobmaster.jobs.sno;
 
-import com.jvprojects.jobmaster.services.StorjSnoSecondService;
+import com.jvprojects.jobmaster.services.sno.StorjSnoSecondService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;

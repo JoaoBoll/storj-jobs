@@ -1,6 +1,6 @@
 package com.jvprojects.jobmaster.scheduler;
 
-import com.jvprojects.jobmaster.jobs.*;
+import com.jvprojects.jobmaster.jobs.sno.*;
 import org.quartz.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

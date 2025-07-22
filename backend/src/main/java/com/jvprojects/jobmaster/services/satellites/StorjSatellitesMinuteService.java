@@ -1,4 +1,4 @@
-package com.jvprojects.jobmaster.services;
+package com.jvprojects.jobmaster.services.satellites;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jvprojects.jobmaster.config.Configurations;
@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
-public class StorjSatellitesService {
+public class StorjSatellitesMinuteService {
 
     private static final Logger log = LoggerFactory.getLogger(StorjSnoSecondService.class);
 
@@ -31,36 +31,11 @@ public class StorjSatellitesService {
     private StorjNodeRepository storjNodeRepository;
     private StorjSatellitesRepository storjSatellitesRepository;
 
-    public StorjSatellitesService(Configurations configurations, StorjNodeRepository storjNodeRepository, StorjSatellitesRepository storjSatellitesRepository) {
+    public StorjSatellitesMinuteService(Configurations configurations, StorjNodeRepository storjNodeRepository, StorjSatellitesRepository storjSatellitesRepository) {
         this.configurations = configurations;
         this.urls = configurations.getUrls();
         this.storjNodeRepository = storjNodeRepository;
         this.storjSatellitesRepository = storjSatellitesRepository;
-    }
-
-    public List<StorjSatellitesDto> fetchStorjSatellites() {
-        log.info("Fetching Storj Satellites data...");
-        List<CompletableFuture<StorjSatellitesDto>> futures = urls.stream()
-                .map(url -> CompletableFuture.supplyAsync(() -> consultNode(url)))
-                .collect(Collectors.toList());
-
-        return futures.stream()
-                .map(CompletableFuture::join)
-                .filter(dto -> dto != null)
-                .collect(Collectors.toList());
-    }
-
-    private StorjSatellitesDto consultNode(String url) {
-        try {
-            String json = restTemplate.getForObject(url + "/api/sno/satellites", String.class);
-            StorjSatellitesDto dto = objectMapper.readValue(json, StorjSatellitesDto.class);
-            dto.setUlr(url);
-            log.info("✅ Success: {}", url);
-            return dto;
-        } catch (Exception e) {
-            log.error("❌ Fail {}: {}", url, e.getMessage(), e);
-            return null;
-        }
     }
 
     public void saveAll(List<StorjSatellitesDto> itens) {

@@ -2,7 +2,7 @@ package com.jvprojects.jobmaster.jobs;
 
 import com.jvprojects.jobmaster.dto.StorjSatellitesDto;
 import com.jvprojects.jobmaster.repositories.sno.StorjSnoSecondRepository;
-import com.jvprojects.jobmaster.services.StorjSatellitesService;
+import com.jvprojects.jobmaster.services.satellites.StorjSatellitesService;
 import com.jvprojects.jobmaster.services.sno.StorjSnoSecondService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;

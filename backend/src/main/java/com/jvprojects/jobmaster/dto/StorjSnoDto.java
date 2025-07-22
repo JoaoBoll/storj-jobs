@@ -1,10 +1,12 @@
 package com.jvprojects.jobmaster.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Data
 public class StorjSnoDto {
 
@@ -52,6 +54,7 @@ public class StorjSnoDto {
     @JsonProperty("lastQuicPingedAt")
     private String lastQuicPingedAt;
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Data
     public static class Satellite {
 
@@ -66,8 +69,12 @@ public class StorjSnoDto {
 
         @JsonProperty("suspended")
         private String suspended;
+
+        @JsonProperty("vettedAt")
+        private String vettedAt;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Data
     public static class DiskSpace {
 
@@ -84,6 +91,7 @@ public class StorjSnoDto {
         private Long overused;
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Data
     public static class Bandwidth {
 

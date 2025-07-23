@@ -43,8 +43,16 @@ public class StorjSnoMonthService {
             StorjSnoWeek first = storjSnoWeekRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(storjNode.getNodeId(), startTime, endTime);
             StorjSnoWeek last = storjSnoWeekRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(storjNode.getNodeId(), startTime, endTime);
 
-            if (!first.getId().equals(last.getId()) && first.getUsedBandwidth() != null
-                    && last.getUsedBandwidth() != null) {
+            if (first == null) {
+                first = storjSnoWeekRepository.findFirstByNodeIdOrderByCreatedAtAsc(storjNode.getNodeId());
+            }
+
+            if (last == null) {
+                last = storjSnoWeekRepository.findFirstByNodeIdOrderByCreatedAtDesc(storjNode.getNodeId());
+            }
+
+            if (first != null && last != null && !first.getId().equals(last.getId())
+                    && first.getUsedBandwidth() != null && last.getUsedBandwidth() != null) {
 
                 Long durationInSeconds = java.time.Duration.between(first.getCreatedAt(), last.getCreatedAt()).getSeconds();
 

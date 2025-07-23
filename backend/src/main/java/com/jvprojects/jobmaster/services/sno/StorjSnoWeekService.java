@@ -42,6 +42,14 @@ public class StorjSnoWeekService {
             StorjSnoDay first = storjSnoDayRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(storjNode.getNodeId(), startTime, endTime);
             StorjSnoDay last = storjSnoDayRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(storjNode.getNodeId(), startTime, endTime);
 
+            if (first == null) {
+                first = storjSnoDayRepository.findFirstByNodeIdOrderByCreatedAtAsc(storjNode.getNodeId());
+            }
+
+            if (last == null) {
+                last = storjSnoDayRepository.findFirstByNodeIdOrderByCreatedAtDesc(storjNode.getNodeId());
+            }
+
             if (!first.getId().equals(last.getId()) && first.getUsedBandwidth() != null
                     && last.getUsedBandwidth() != null) {
 

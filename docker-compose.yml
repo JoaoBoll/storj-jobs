@@ -6,6 +6,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      - database_url=${database_url}
+      - database_user=${database_user}
+      - database_password=${database_password}
+      - urls=${urls}
+      - log_level=${log_level}
     networks:
       - app-network
 

@@ -10,8 +10,6 @@ import java.time.OffsetDateTime;
 @Repository
 public interface StorjSnoMonthRepository extends JpaRepository<StorjSnoMonth, Long> {
     StorjSnoMonth findByNodeId(String nodeId);
-
     StorjSnoMonth findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);
-
     StorjSnoMonth findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);
 }

@@ -10,8 +10,8 @@ import java.time.OffsetDateTime;
 @Repository
 public interface StorjSnoMinuteRepository extends JpaRepository<StorjSnoMinute, Long> {
     StorjSnoMinute findByNodeId(String nodeId);
-
     StorjSnoMinute findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);
-
+    StorjSnoMinute findFirstByNodeIdOrderByCreatedAtAsc(String nodeId);
     StorjSnoMinute findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);
+    StorjSnoMinute findFirstByNodeIdOrderByCreatedAtDesc(String nodeId);
 }

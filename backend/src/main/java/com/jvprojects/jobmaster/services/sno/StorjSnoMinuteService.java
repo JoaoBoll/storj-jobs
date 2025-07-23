@@ -46,8 +46,16 @@ public class StorjSnoMinuteService {
             StorjSnoSecond first = storjSnoSecondRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(storjNode.getNodeId(), startTime, endTime);
             StorjSnoSecond last = storjSnoSecondRepository.findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(storjNode.getNodeId(), startTime, endTime);
 
-            if (!first.getId().equals(last.getId()) && first.getUsedBandwidth() != null
-                    && last.getUsedBandwidth() != null) {
+            if (first == null) {
+                first = storjSnoSecondRepository.findFirstByNodeIdOrderByCreatedAtAsc(storjNode.getNodeId());
+            }
+
+            if (last == null) {
+                last = storjSnoSecondRepository.findFirstByNodeIdOrderByCreatedAtDesc(storjNode.getNodeId());
+            }
+
+            if (first != null && last != null && !first.getId().equals(last.getId())
+                    && first.getUsedBandwidth() != null && last.getUsedBandwidth() != null) {
 
                 Long durationInSeconds = java.time.Duration.between(first.getCreatedAt(), last.getCreatedAt()).getSeconds();
 

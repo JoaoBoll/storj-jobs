@@ -11,8 +11,8 @@ import java.time.OffsetDateTime;
 @Repository
 public interface StorjSnoHourRepository extends JpaRepository<StorjSnoHour, Long> {
     StorjSnoHour findByNodeId(String nodeId);
-
     StorjSnoHour findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtAsc(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);
-
+    StorjSnoHour findFirstByNodeIdOrderByCreatedAtAsc(String nodeId);
     StorjSnoHour findFirstByNodeIdAndCreatedAtBetweenOrderByCreatedAtDesc(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);
+    StorjSnoHour findFirstByNodeIdOrderByCreatedAtDesc(String nodeId);
 }

@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 @DisallowConcurrentExecution
 public class StorjSnoMinuteJob implements Job {
 
-    private static final Logger log = LoggerFactory.getLogger(StorjSnoMinuteService.class);
+    private static final Logger log = LoggerFactory.getLogger(StorjSnoMinuteJob.class);
 
     private final StorjSnoMinuteService storjSnoMinuteService;
 

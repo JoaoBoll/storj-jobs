@@ -1,47 +1,46 @@
 package com.jvprojects.jobmaster.scheduler;
 
-import com.jvprojects.jobmaster.jobs.sno.StorjSnoSecondJob;
-import com.jvprojects.jobmaster.jobs.sno.StorjSnoMinuteJob;
-import com.jvprojects.jobmaster.jobs.sno.StorjSno5mJob;
 import com.jvprojects.jobmaster.jobs.sno.StorjSno15mJob;
 import com.jvprojects.jobmaster.jobs.sno.StorjSno30mJob;
-import com.jvprojects.jobmaster.jobs.sno.StorjSnoHourJob;
+import com.jvprojects.jobmaster.jobs.sno.StorjSno5mJob;
+import com.jvprojects.jobmaster.jobs.sno.StorjSnoCollectorJob;
 import com.jvprojects.jobmaster.jobs.sno.StorjSnoDayJob;
-import com.jvprojects.jobmaster.jobs.sno.StorjSnoWeekJob;
+import com.jvprojects.jobmaster.jobs.sno.StorjSnoHourJob;
+import com.jvprojects.jobmaster.jobs.sno.StorjSnoMinuteJob;
 import com.jvprojects.jobmaster.jobs.sno.StorjSnoMonthJob;
-import org.quartz.*;
+import com.jvprojects.jobmaster.jobs.sno.StorjSnoWeekJob;
+import org.quartz.CronScheduleBuilder;
+import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
+import org.quartz.Trigger;
+import org.quartz.TriggerBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Only the collector runs on a cron schedule: it fetches the Storj node API every 5 seconds
+ * and cascades every aggregation level (minute, 5m, 15m, 30m, hour, day, week, month) whose
+ * time boundary was just reached, in the same run. The aggregation jobs below are kept as
+ * durable, trigger-less job details purely so they stay reachable for a manual/forced run
+ * from JobController; they are never scheduled independently.
+ */
 @Configuration
 public class QuartzConfig {
 
-    // Configuration for the StorjSno Job, which runs every 5 second with an initial delay of 10 seconds.
-    // This job will execute continuously and is stored durably.
     @Bean
-    public Trigger storjSnoJobTrigger() {
+    public Trigger storjSnoCollectorJobTrigger() {
         return TriggerBuilder.newTrigger()
-                .withIdentity("storjSnoJobTrigger")
-                .forJob(storjSnoJobDetail())
+                .withIdentity("storjSnoCollectorJobTrigger")
+                .forJob(storjSnoCollectorJobDetail())
                 .withSchedule(CronScheduleBuilder.cronSchedule("0,5,10,15,20,25,30,35,40,45,50,55 * * * * ?"))
                 .build();
     }
 
     @Bean
-    public JobDetail storjSnoJobDetail() {
-        return JobBuilder.newJob(StorjSnoSecondJob.class)
-                .withIdentity("storjSnoJob")
+    public JobDetail storjSnoCollectorJobDetail() {
+        return JobBuilder.newJob(StorjSnoCollectorJob.class)
+                .withIdentity("storjSnoCollectorJob")
                 .storeDurably()
-                .build();
-    }
-
-    // Configuration for the StorjSnoMinuteJob Job, which runs exactly at the start of each minute (00:00:00, 00:01:00, etc.)
-    @Bean
-    public Trigger storjSnoMinuteJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSnoMinuteJobTrigger")
-                .forJob(storjSnoMinuteJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 * * * * ?"))
                 .build();
     }
 
@@ -54,28 +53,10 @@ public class QuartzConfig {
     }
 
     @Bean
-    public Trigger storjSno5mJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSno5mJobTrigger")
-                .forJob(storjSno5mJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0,5,10,15,20,25,30,35,40,45,50,55 * * * ?"))
-                .build();
-    }
-
-    @Bean
     public JobDetail storjSno5mJobDetail() {
         return JobBuilder.newJob(StorjSno5mJob.class)
                 .withIdentity("storjSno5mJob")
                 .storeDurably()
-                .build();
-    }
-
-    @Bean
-    public Trigger storjSno15mJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSno15mJobTrigger")
-                .forJob(storjSno15mJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0,15,30,45 * * * ?"))
                 .build();
     }
 
@@ -88,29 +69,10 @@ public class QuartzConfig {
     }
 
     @Bean
-    public Trigger storjSno30mJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSno30mJobTrigger")
-                .forJob(storjSno30mJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0,30 * * * ?"))
-                .build();
-    }
-
-    @Bean
     public JobDetail storjSno30mJobDetail() {
         return JobBuilder.newJob(StorjSno30mJob.class)
                 .withIdentity("storjSno30mJob")
                 .storeDurably()
-                .build();
-    }
-
-    // Configuration for the StorjSnoHourJob Job, which runs exactly at the start of each hour (00:00:00, 00:01:00, etc.)
-    @Bean
-    public Trigger storjSnoHourJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSnoHourJobTrigger")
-                .forJob(storjSnoHourJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
                 .build();
     }
 
@@ -122,31 +84,11 @@ public class QuartzConfig {
                 .build();
     }
 
-    // Configuration for the StorjSnoDayJob Job, which runs exactly at the start of each hour (00:00:00, 00:01:00, etc.)
-    @Bean
-    public Trigger storjSnoDayJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSnoDayJobTrigger")
-                .forJob(storjSnoDayJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
-                .build();
-    }
-
     @Bean
     public JobDetail storjSnoDayJobDetail() {
         return JobBuilder.newJob(StorjSnoDayJob.class)
                 .withIdentity("storjSnoDayJob")
                 .storeDurably()
-                .build();
-    }
-
-    // Configuration for the StorjSnoWeekJob Job, which runs exactly at the start of each week
-    @Bean
-    public Trigger storjSnoWeekJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSnoWeekJobTrigger")
-                .forJob(storjSnoWeekJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0 ? * SUN")) // Executa todo domingo à meia-noite
                 .build();
     }
 
@@ -158,16 +100,6 @@ public class QuartzConfig {
                 .build();
     }
 
-    // Configuration for the StorjSnoMonthJob Job, which runs exactly at the start of each month
-    @Bean
-    public Trigger storjSnoMonthJobTrigger() {
-        return TriggerBuilder.newTrigger()
-                .withIdentity("storjSnoMonthJobTrigger")
-                .forJob(storjSnoMonthJobDetail())
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0 ? * SUN")) // Executa todo domingo à meia-noite
-                .build();
-    }
-
     @Bean
     public JobDetail storjSnoMonthJobDetail() {
         return JobBuilder.newJob(StorjSnoMonthJob.class)
@@ -175,78 +107,5 @@ public class QuartzConfig {
                 .storeDurably()
                 .build();
     }
-//    // Configuration for the StorjSnoMinuteJob Job, which runs exactly at the start of each hour (00:00:00, 00:01:00, etc.)
-//    @Bean
-//    public Trigger storjSnoHourJobTrigger() {
-//        return TriggerBuilder.newTrigger()
-//                .withIdentity("storjSnoHourJobTrigger")
-//                .forJob(storjSnoHourJobDetail())
-//                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
-//                .build();
-//    }
-//
-//    @Bean
-//    public JobDetail storjSnoHourJobDetail() {
-//        return JobBuilder.newJob(StorjSnoHourJob.class)
-//                .withIdentity("storjSnoHourJob")
-//                .storeDurably()
-//                .build();
-//    }
-    // Configuration for the StorjSnoMinuteJob Job, which runs exactly at the start of each hour (00:00:00, 00:01:00, etc.)
-//    @Bean
-//    public Trigger storjSnoHourJobTrigger() {
-//        return TriggerBuilder.newTrigger()
-//                .withIdentity("storjSnoHourJobTrigger")
-//                .forJob(storjSnoHourJobDetail())
-//                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
-//                .build();
-//    }
-//
-//    @Bean
-//    public JobDetail storjSnoHourJobDetail() {
-//        return JobBuilder.newJob(StorjSnoHourJob.class)
-//                .withIdentity("storjSnoHourJob")
-//                .storeDurably()
-//                .build();
-//    }
-
-    // Configuration for the StorjSatellites Job, which runs exactly at the start of each minute (00:00:00, 00:01:00, etc.)
-    // Initial delay of 10 seconds before the first execution
-//    @Bean
-//    public Trigger storjSatellitesJobTrigger() {
-//        return TriggerBuilder.newTrigger()
-//                .withIdentity("storjSatellitesJobTrigger")
-//                .forJob(storjSatellitesJobDetail())
-//                .withSchedule(CronScheduleBuilder.cronSchedule("0 * * * * ?"))
-//                .build();
-//    }
-//
-//    @Bean
-//    public JobDetail storjSatellitesJobDetail() {
-//        return JobBuilder.newJob(StorjSatellitesJob.class)
-//                .withIdentity("storjSatellitesJob")
-//                .storeDurably()
-//                .build();
-//    }
-
-
-    // Configuration for the StorjHourly Job, which runs precisely at the start of each hour (00:00, 01:00, 02:00, etc.)
-    // The job executes according to UTC time zone to ensure global consistency.
-//    @Bean
-//    public Trigger storjHourlyJobTrigger() {
-//        return TriggerBuilder.newTrigger()
-//                .withIdentity("storjHourlyJobTrigger")
-//                .forJob(storjHourlyJobDetail())
-//                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 * * * ?"))
-//                .build();
-//    }
-//
-//    @Bean
-//    public JobDetail storjHourlyJobDetail() {
-//        return JobBuilder.newJob(StorjHourlyJob.class)
-//                .withIdentity("storjHourlyJob")
-//                .storeDurably()
-//                .build();
-//    }
 
 }

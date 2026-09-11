@@ -5,7 +5,7 @@ import { SplineAreaChartComponent } from './shared/charts/spline-area-chart/spli
 import { ChartOptions } from './models/chart-options.model';
 
 type Unit = 'MB' | 'GB' | 'TB';
-type Interval = '5m' | '15m' | '30m' | '1h' | '1d' | '1w' | '1mo';
+type Interval = '5s' | '15s' | '30s' | '5m' | '15m' | '30m' | '1h' | '1d' | '1w' | '1mo';
 
 interface NodeResponse {
   id: string;
@@ -63,6 +63,9 @@ export class AppComponent {
   public bandwidthInterval: Interval = '5m';
   public uptimeInterval: Interval = '5m';
   public overviewData: { [key in Interval]: OverviewResponse } = {
+    '5s': { interval: '5s', points: 30, data: [] },
+    '15s': { interval: '15s', points: 30, data: [] },
+    '30s': { interval: '30s', points: 30, data: [] },
     '5m': { interval: '5m', points: 30, data: [] },
     '15m': { interval: '15m', points: 30, data: [] },
     '30m': { interval: '30m', points: 30, data: [] },
@@ -87,22 +90,31 @@ export class AppComponent {
     { label: 'SNO month', cadence: 'Monthly', state: 'Scheduled' }
   ];
 
+  private readonly loadedIntervals = new Set<Interval>();
+
   constructor(private readonly http: HttpClient) {
     this.loadNodes();
     this.loadOverview();
   }
 
-  public loadOverview(): void {
-    const intervals: Interval[] = ['5m', '15m', '30m', '1h', '1d', '1w', '1mo'];
-    intervals.forEach(interval => {
-      this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}`).subscribe({
-        next: (overview) => {
-          this.overviewData[interval] = overview;
-          this.updateOverviewCharts();
-          this.lastSync = new Date();
-        },
-        error: () => this.toastMessage = 'Failed to load overview'
-      });
+  public loadOverview(force = false): void {
+    const activeIntervals = new Set<Interval>([this.storageInterval, this.trashInterval, this.bandwidthInterval, this.uptimeInterval]);
+    activeIntervals.forEach(interval => this.fetchInterval(interval, force));
+  }
+
+  private fetchInterval(interval: Interval, force = false): void {
+    if (this.loadedIntervals.has(interval) && !force) {
+      this.updateOverviewCharts();
+      return;
+    }
+    this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}`).subscribe({
+      next: (overview) => {
+        this.overviewData[interval] = overview;
+        this.loadedIntervals.add(interval);
+        this.updateOverviewCharts();
+        this.lastSync = new Date();
+      },
+      error: () => this.toastMessage = 'Failed to load overview'
     });
   }
 
@@ -111,7 +123,7 @@ export class AppComponent {
     if (chart === 'trash') this.trashInterval = interval;
     if (chart === 'bandwidth') this.bandwidthInterval = interval;
     if (chart === 'uptime') this.uptimeInterval = interval;
-    this.updateOverviewCharts();
+    this.fetchInterval(interval);
   }
 
   public selectUnit(chart: 'storage' | 'trash' | 'bandwidth', unit: Unit): void {
@@ -127,10 +139,10 @@ export class AppComponent {
     const bandwidthData = this.overviewData[this.bandwidthInterval];
     const uptimeData = this.overviewData[this.uptimeInterval];
 
-    const storageLabels = storageData.data.map(point => this.formatLabel(point.label));
-    const trashLabels = trashData.data.map(point => this.formatLabel(point.label));
-    const bandwidthLabels = bandwidthData.data.map(point => this.formatLabel(point.label));
-    const uptimeLabels = uptimeData.data.map(point => this.formatLabel(point.label));
+    const storageLabels = storageData.data.map(point => this.formatLabel(point.label, this.storageInterval));
+    const trashLabels = trashData.data.map(point => this.formatLabel(point.label, this.trashInterval));
+    const bandwidthLabels = bandwidthData.data.map(point => this.formatLabel(point.label, this.bandwidthInterval));
+    const uptimeLabels = uptimeData.data.map(point => this.formatLabel(point.label, this.uptimeInterval));
 
     this.storageChart = { ...this.storageChart, series: [
       { name: `Storage used (${this.storageUnit})`, data: storageData.data.map(point => this.toUnit(point.storageUsed, this.storageUnit)) },
@@ -165,9 +177,15 @@ export class AppComponent {
     return { ...chart, series: [{ name, data }], xaxis: { ...chart.xaxis, categories: labels } };
   }
 
-  public formatLabel(label: string): string {
+  public formatLabel(label: string, interval: Interval): string {
     const date = new Date(label);
-    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    if (interval === '5s' || interval === '15s' || interval === '30s') {
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+    return `${hours}:${minutes}`;
   }
 
   public toUnit(bytes: number | null, unit: Unit): number {

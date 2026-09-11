@@ -82,13 +82,17 @@ public class ApiController {
 
     private Duration intervalDuration(String interval) {
         return switch (interval) {
+            case "5s" -> Duration.ofSeconds(5);
+            case "15s" -> Duration.ofSeconds(15);
+            case "30s" -> Duration.ofSeconds(30);
+            case "5m" -> Duration.ofMinutes(5);
             case "15m" -> Duration.ofMinutes(15);
             case "30m" -> Duration.ofMinutes(30);
             case "1h" -> Duration.ofHours(1);
             case "1d" -> Duration.ofDays(1);
             case "1w" -> Duration.ofDays(7);
             case "1mo" -> Duration.ofDays(30);
-            default -> Duration.ofMinutes(5);
+            default -> Duration.ofSeconds(5);
         };
     }
 

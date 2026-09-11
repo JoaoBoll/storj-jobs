@@ -50,8 +50,8 @@ public class StorjSnoWeekService {
                 last = storjSnoDayRepository.findFirstByNodeIdOrderByCreatedAtDesc(storjNode.getNodeId());
             }
 
-            if (!first.getId().equals(last.getId()) && first.getUsedBandwidth() != null
-                    && last.getUsedBandwidth() != null) {
+            if (first != null && last != null && !first.getId().equals(last.getId())
+                    && first.getUsedBandwidth() != null && last.getUsedBandwidth() != null) {
 
                 Long durationInSeconds = java.time.Duration.between(first.getCreatedAt(), last.getCreatedAt()).getSeconds();
 

@@ -21,6 +21,21 @@ public class JobController {
         this.scheduler = scheduler;
     }
 
+    @PostMapping("/5s")
+    public ResponseEntity<String> trigger5s() {
+        return triggerJob("storjSnoCollectorJobTrigger");
+    }
+
+    @PostMapping("/15s")
+    public ResponseEntity<String> trigger15s() {
+        return triggerJob("storjSnoCollectorJobTrigger");
+    }
+
+    @PostMapping("/30s")
+    public ResponseEntity<String> trigger30s() {
+        return triggerJob("storjSnoCollectorJobTrigger");
+    }
+
     @PostMapping("/5m")
     public ResponseEntity<String> trigger5m() {
         return triggerJob("storjSno5mJobTrigger");

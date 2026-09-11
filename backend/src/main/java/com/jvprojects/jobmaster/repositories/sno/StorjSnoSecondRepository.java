@@ -10,6 +10,8 @@ import java.time.OffsetDateTime;
 @Repository
 public interface StorjSnoSecondRepository extends JpaRepository<StorjSnoSecond, Long> {
     java.util.List<StorjSnoSecond> findAllByOrderByCreatedAtDesc();
+
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM StorjSnoSecond s WHERE s.createdAt BETWEEN ?1 AND ?2 ORDER BY s.createdAt DESC")
     java.util.List<StorjSnoSecond> findByCreatedAtBetweenOrderByCreatedAtDesc(OffsetDateTime startDate, OffsetDateTime endDate);
     StorjSnoSecond findByNodeId(String nodeId);
     Long countByNodeIdAndCreatedAtBetween(String nodeId, OffsetDateTime startDate, OffsetDateTime endDate);

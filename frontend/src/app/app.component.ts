@@ -163,7 +163,9 @@ export class AppComponent implements OnDestroy {
       this.updateChart(chart);
       return;
     }
-    this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}&points=${range}`).subscribe({
+    // Fetch one extra point for accurate delta calculation on first visible point
+    const pointsToFetch = range + 1;
+    this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}&points=${pointsToFetch}`).subscribe({
       next: (overview) => {
         this.overviewData.set(key, overview);
         this.updateChart(chart);
@@ -221,67 +223,77 @@ export class AppComponent implements OnDestroy {
 
   private updateStorageChart(): void {
     const data = this.overviewFor(this.storageInterval, this.storageRange);
-    const labels = data.data.map(point => this.formatLabel(point.label, this.storageInterval));
     const rawValues = data.data.map(point => point.storageUsed ?? 0);
     const unit = this.resolveUnit(this.storageUnit, this.representativeBytes(rawValues));
     const values = rawValues.map(bytes => this.toUnit(bytes, unit));
+    // Use all points for delta calculation, then display only the last N
+    const displayValues = values.slice(-this.storageRange);
+    const displayLabels = data.data.slice(-this.storageRange).map(point => this.formatLabel(point.label, this.storageInterval));
     this.storageChart = {
       ...this.storageChart,
-      series: [{ name: `Storage used (${unit})`, data: values }],
-      xaxis: { ...this.storageChart.xaxis, categories: labels },
-      tooltip: this.buildDeltaTooltip(unit, values)
+      series: [{ name: `Storage used (${unit})`, data: displayValues }],
+      xaxis: { ...this.storageChart.xaxis, categories: displayLabels },
+      tooltip: this.buildDeltaTooltip(unit, displayValues)
     };
-    const latest = values.length ? values[values.length - 1] : 0;
+    const latest = displayValues.length ? displayValues[displayValues.length - 1] : 0;
     this.storageSummary = `${this.formatNumber(latest)} ${unit}`;
-    this.storageDeltaText = this.formatDelta(values, unit);
+    this.storageDeltaText = this.formatDelta(displayValues, unit);
   }
 
   private updateTrashChart(): void {
     const data = this.overviewFor(this.trashInterval, this.trashRange);
-    const labels = data.data.map(point => this.formatLabel(point.label, this.trashInterval));
     const rawValues = data.data.map(point => point.trashUsed ?? 0);
     const unit = this.resolveUnit(this.trashUnit, this.representativeBytes(rawValues));
     const values = rawValues.map(bytes => this.toUnit(bytes, unit));
+    // Use all points for delta calculation, then display only the last N
+    const displayValues = values.slice(-this.trashRange);
+    const displayLabels = data.data.slice(-this.trashRange).map(point => this.formatLabel(point.label, this.trashInterval));
     this.trashChart = {
       ...this.trashChart,
-      series: [{ name: `Trash (${unit})`, data: values }],
-      xaxis: { ...this.trashChart.xaxis, categories: labels },
-      tooltip: this.buildDeltaTooltip(unit, values)
+      series: [{ name: `Trash (${unit})`, data: displayValues }],
+      xaxis: { ...this.trashChart.xaxis, categories: displayLabels },
+      tooltip: this.buildDeltaTooltip(unit, displayValues)
     };
-    const latest = values.length ? values[values.length - 1] : 0;
+    const latest = displayValues.length ? displayValues[displayValues.length - 1] : 0;
     this.trashSummary = `${this.formatNumber(latest)} ${unit}`;
-    this.trashDeltaText = this.formatDelta(values, unit);
+    this.trashDeltaText = this.formatDelta(displayValues, unit);
   }
 
   private updateBandwidthChart(): void {
     const data = this.overviewFor(this.bandwidthInterval, this.bandwidthRange);
-    const labels = data.data.map(point => this.formatLabel(point.label, this.bandwidthInterval));
     const rawIngress = data.data.map(point => point.ingressTotal ?? 0);
     const rawEgress = data.data.map(point => point.egressTotal ?? 0);
     const unit = this.resolveUnit(this.bandwidthUnit, Math.max(this.representativeBytes(rawIngress), this.representativeBytes(rawEgress)));
     const ingressValues = rawIngress.map(bytes => this.toUnit(bytes, unit));
     const egressValues = rawEgress.map(bytes => this.toUnit(bytes, unit));
+    // Use all points for delta calculation
     const ingressDeltas = this.toBandwidthDeltaSeries(ingressValues);
     const egressDeltas = this.toBandwidthDeltaSeries(egressValues).map(v => -v); // Invert egress
+    // Display only the last N points
+    const displayIngressDeltas = ingressDeltas.slice(-this.bandwidthRange);
+    const displayEgressDeltas = egressDeltas.slice(-this.bandwidthRange);
+    const displayIngressValues = ingressValues.slice(-this.bandwidthRange);
+    const displayEgressValues = egressValues.slice(-this.bandwidthRange);
+    const displayLabels = data.data.slice(-this.bandwidthRange).map(point => this.formatLabel(point.label, this.bandwidthInterval));
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
-        { name: 'Ingress', data: ingressDeltas },
-        { name: 'Egress', data: egressDeltas }
+        { name: 'Ingress', data: displayIngressDeltas },
+        { name: 'Egress', data: displayEgressDeltas }
       ],
-      xaxis: { ...this.bandwidthChart.xaxis, categories: labels },
+      xaxis: { ...this.bandwidthChart.xaxis, categories: displayLabels },
       tooltip: this.buildSignedTooltip(unit, [
-        { name: 'Ingress', values: ingressDeltas, totals: ingressValues },
-        { name: 'Egress', values: egressDeltas.map(v => -v), totals: egressValues }
+        { name: 'Ingress', values: displayIngressDeltas, totals: displayIngressValues },
+        { name: 'Egress', values: displayEgressDeltas.map(v => -v), totals: displayEgressValues }
       ])
     };
-    const totalIngress = this.formatNumber(ingressValues.length ? ingressValues[ingressValues.length - 1] : 0);
-    const totalEgress = this.formatNumber(egressValues.length ? egressValues[egressValues.length - 1] : 0);
+    const totalIngress = this.formatNumber(displayIngressValues.length ? displayIngressValues[displayIngressValues.length - 1] : 0);
+    const totalEgress = this.formatNumber(displayEgressValues.length ? displayEgressValues[displayEgressValues.length - 1] : 0);
     this.bandwidthSummary = `Total Ingress: ${totalIngress} ${unit} · Total Egress: ${totalEgress} ${unit}`;
     this.bandwidthIngressTotal = `${totalIngress} ${unit}`;
     this.bandwidthEgressTotal = `${totalEgress} ${unit}`;
-    this.bandwidthIngressDeltaText = this.formatDelta(ingressValues, unit);
-    this.bandwidthEgressDeltaText = this.formatDelta(egressValues, unit);
+    this.bandwidthIngressDeltaText = this.formatDelta(displayIngressValues, unit);
+    this.bandwidthEgressDeltaText = this.formatDelta(displayEgressValues, unit);
   }
 
   private toDeltaSeries(values: number[]): number[] {
@@ -304,12 +316,14 @@ export class AppComponent implements OnDestroy {
 
   private updateUptimeChart(): void {
     const data = this.overviewFor(this.uptimeInterval, this.uptimeRange);
-    const labels = data.data.map(point => this.formatLabel(point.label, this.uptimeInterval));
     const values = data.data.map(point => point.uptimePercent);
-    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', values, labels);
-    const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 100;
+    // Use all points for average calculation, then display only the last N
+    const displayValues = values.slice(-this.uptimeRange);
+    const displayLabels = data.data.slice(-this.uptimeRange).map(point => this.formatLabel(point.label, this.uptimeInterval));
+    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', displayValues, displayLabels);
+    const average = displayValues.length ? displayValues.reduce((sum, value) => sum + value, 0) / displayValues.length : 100;
     this.uptimeSummary = `Average: ${average.toFixed(2)}%`;
-    this.uptimeDeltaText = this.formatDelta(values, '%');
+    this.uptimeDeltaText = this.formatDelta(displayValues, '%');
   }
 
   private percentChange(values: number[], index: number): number {

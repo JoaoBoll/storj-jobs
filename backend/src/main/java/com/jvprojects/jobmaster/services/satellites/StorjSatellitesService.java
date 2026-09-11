@@ -66,66 +66,65 @@ public class StorjSatellitesService {
     public void saveAll(List<StorjSatellitesDto> itens) {
 
         for (StorjSatellitesDto item : itens) {
-
-            StorjNode storjNode = storjNodeRepository.findByUrl(item.getUlr());
-
-            StorjSatellites satellite = storjSatellitesRepository.findByStorjNodeId(storjNode.getId());
-
-            if (satellite == null) {
-                satellite = new StorjSatellites();
-                satellite.setStorjNode(storjNode);
+            try {
+                saveOne(item);
+            } catch (Exception e) {
+                log.error("Failed to save satellites data for {}: {}", item.getUlr(), e.getMessage(), e);
             }
+        }
+    }
 
-            //StorageDaily
-            List<StorageDaily> storageDailyList = new ArrayList<>();
+    private void saveOne(StorjSatellitesDto item) {
+        StorjNode storjNode = storjNodeRepository.findByUrl(item.getUlr());
 
-            for (StorjSatellitesDto.StorageDaily daily : item.getStorageDaily()) {
-                StorageDaily storageDaily = new StorageDaily();
-
-                storageDaily.setAtRestTotal(daily.getAtRestTotal());
-                storageDaily.setAtRestTotalBytes(daily.getAtRestTotalBytes());
-                storageDaily.setIntervalStart(OffsetDateTime.parse(daily.getIntervalStart()));
-
-                storageDaily.setStorjSatellite(satellite);
-
-                storageDailyList.add(storageDaily);
-            }
-
-            satellite.setStorageDaily(storageDailyList);
-
-            //BandwidthDaily
-            List<BandwidthDaily> bandwidthDailyList = new ArrayList<>();
-
-            for (StorjSatellitesDto.BandwidthDaily band : item.getBandwidthDaily()) {
-                BandwidthDaily bandwidthDaily = new BandwidthDaily(band);
-
-                bandwidthDaily.setStorjSatellite(satellite);
-                bandwidthDailyList.add(bandwidthDaily);
-            }
-
-            satellite.setBandwidthDaily(bandwidthDailyList);
-
-            //Audits
-            List<Audits> audits = new ArrayList<>();
-
-            for (StorjSatellitesDto.Audit audit : item.getAudits()) {
-                Audits aud =  new Audits(audit);
-
-                aud.setStorjSatellite(satellite);
-                audits.add(aud);
-            }
-
-            satellite.setAudits(audits);
-
-            satellite.setStorageSummary(item.getStorageSummary());
-            satellite.setAverageUsageBytes(item.getAverageUsageBytes());
-            satellite.setBandwidthSummary(item.getBandwidthSummary());
-            satellite.setEgressSummary(item.getEgressSummary());
-            satellite.setIngressSummary(item.getIngressSummary());
-            satellite.setEarliestJoinedAt(OffsetDateTime.parse(item.getEarliestJoinedAt()));
-
-            storjSatellitesRepository.save(satellite);
+        if (storjNode == null) {
+            log.warn("No StorjNode registered for url {}, skipping satellites save", item.getUlr());
+            return;
         }
 
+        StorjSatellites satellite = storjSatellitesRepository.findByStorjNodeId(storjNode.getId());
+
+        if (satellite == null) {
+            satellite = new StorjSatellites();
+            satellite.setStorjNode(storjNode);
+        }
+
+        List<StorageDaily> storageDailyList = new ArrayList<>();
+        for (StorjSatellitesDto.StorageDaily daily : item.getStorageDaily()) {
+            StorageDaily storageDaily = new StorageDaily();
+            storageDaily.setAtRestTotal(daily.getAtRestTotal());
+            storageDaily.setAtRestTotalBytes(daily.getAtRestTotalBytes());
+            storageDaily.setIntervalStart(OffsetDateTime.parse(daily.getIntervalStart()));
+            storageDaily.setStorjSatellite(satellite);
+            storageDailyList.add(storageDaily);
+        }
+        satellite.setStorageDaily(storageDailyList);
+
+        List<BandwidthDaily> bandwidthDailyList = new ArrayList<>();
+        for (StorjSatellitesDto.BandwidthDaily band : item.getBandwidthDaily()) {
+            BandwidthDaily bandwidthDaily = new BandwidthDaily(band);
+            bandwidthDaily.setStorjSatellite(satellite);
+            bandwidthDailyList.add(bandwidthDaily);
+        }
+        satellite.setBandwidthDaily(bandwidthDailyList);
+
+        List<Audits> audits = new ArrayList<>();
+        for (StorjSatellitesDto.Audit audit : item.getAudits()) {
+            Audits aud = new Audits(audit);
+            aud.setStorjSatellite(satellite);
+            audits.add(aud);
+        }
+        satellite.setAudits(audits);
+
+        satellite.setStorageSummary(item.getStorageSummary());
+        satellite.setAverageUsageBytes(item.getAverageUsageBytes());
+        satellite.setBandwidthSummary(item.getBandwidthSummary());
+        satellite.setEgressSummary(item.getEgressSummary());
+        satellite.setIngressSummary(item.getIngressSummary());
+        if (item.getEarliestJoinedAt() != null) {
+            satellite.setEarliestJoinedAt(OffsetDateTime.parse(item.getEarliestJoinedAt()));
+        }
+
+        storjSatellitesRepository.save(satellite);
     }
 }

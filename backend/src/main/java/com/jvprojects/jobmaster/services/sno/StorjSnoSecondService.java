@@ -129,6 +129,14 @@ public class StorjSnoSecondService {
         StorjSatellites satellites = node == null ? null : node.getStorjSatellites();
         if (satellites == null) return;
 
+        // Set estimated payout early if available
+        if (node != null && node.getStorjSatellites() != null && node.getStorjSatellites().getStorjEstimatedPayout() != null) {
+            com.jvprojects.jobmaster.entities.StorjEstimatedPayout estimatedPayout = node.getStorjSatellites().getStorjEstimatedPayout();
+            if (estimatedPayout.getCurrentMonthExpectations() != null) {
+                second.setEstimatedPayout(estimatedPayout.getCurrentMonthExpectations());
+            }
+        }
+
         List<BandwidthDaily> bandwidthDaily = satellites.getBandwidthDaily();
         if (bandwidthDaily != null && !bandwidthDaily.isEmpty()) {
             OffsetDateTime latestDay = bandwidthDaily.stream()

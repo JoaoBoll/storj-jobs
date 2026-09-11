@@ -43,4 +43,7 @@ public class StorjSatellites extends BaseEntity {
     @OneToMany(mappedBy = "storjSatellite", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Audits> audits;
 
+    @OneToOne(mappedBy = "currentMonth", cascade = CascadeType.ALL)
+    private StorjEstimatedPayout storjEstimatedPayout;
+
 }

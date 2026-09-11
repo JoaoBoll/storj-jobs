@@ -59,7 +59,8 @@ public class ApiController {
         Duration step = intervalDuration(interval);
         OffsetDateTime end = alignToBoundary(OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS), interval, step);
         OffsetDateTime start = end.minus(step.multipliedBy(points));
-        List<StorjSnoSecond> snoRecords = storjSnoSecondRepository.findAllByOrderByCreatedAtDesc();
+        // Fetch only records within the time range, not all records in DB
+        List<StorjSnoSecond> snoRecords = storjSnoSecondRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(start.minusMinutes(5), end.plusMinutes(5));
         List<OverviewResponse.Point> resultPoints = new ArrayList<>();
         Long firstStorage = null;
         Long firstTrash = null;

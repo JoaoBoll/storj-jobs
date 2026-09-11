@@ -1,3 +1,15 @@
+import {
+  ApexAxisChartSeries,
+  ApexChart,
+  ApexDataLabels,
+  ApexGrid,
+  ApexLegend,
+  ApexStroke,
+  ApexTooltip,
+  ApexXAxis,
+  ApexYAxis
+} from 'ng-apexcharts';
+
 export type ChartOptions = {
   series: ApexAxisChartSeries;
   chart: ApexChart;

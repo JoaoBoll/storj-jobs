@@ -50,9 +50,6 @@ const RANGE_OPTIONS = [10, 20, 30, 60, 90] as const;
 type Range = typeof RANGE_OPTIONS[number];
 type ChartKey = 'storage' | 'trash' | 'bandwidth' | 'uptime';
 
-const AUTO_REFRESH_OPTIONS = [0, 5, 15, 30, 60, 300, 900] as const;
-type AutoRefreshSeconds = typeof AUTO_REFRESH_OPTIONS[number];
-
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -67,9 +64,10 @@ export class AppComponent implements OnDestroy {
   public trashUnit: Unit = 'Auto';
   public bandwidthUnit: Unit = 'Auto';
   public readonly rangeOptions = RANGE_OPTIONS;
-  public storageInterval: Interval = '5m';
-  public trashInterval: Interval = '5m';
-  public bandwidthInterval: Interval = '5m';
+  public globalInterval: Interval = '5m';
+  public get storageInterval(): Interval { return this.globalInterval; }
+  public get trashInterval(): Interval { return this.globalInterval; }
+  public get bandwidthInterval(): Interval { return this.globalInterval; }
   public uptimeInterval: Interval = '30m';
   public storageRange: Range = 30;
   public trashRange: Range = 30;
@@ -104,33 +102,48 @@ export class AppComponent implements OnDestroy {
   ];
 
   private readonly chartKeys: readonly ChartKey[] = ['storage', 'trash', 'bandwidth', 'uptime'];
-  public readonly autoRefreshOptions = AUTO_REFRESH_OPTIONS;
-  public autoRefreshSeconds: AutoRefreshSeconds = 30;
-  private autoRefreshTimer?: ReturnType<typeof setInterval>;
+  private sharedTimer?: ReturnType<typeof setInterval>;
+  private uptimeTimer?: ReturnType<typeof setInterval>;
 
   constructor(private readonly http: HttpClient) {
     this.loadNodes();
     this.loadOverview();
-    this.scheduleGlobalAutoRefresh();
+    this.scheduleSharedAutoRefresh();
+    this.scheduleUptimeAutoRefresh();
   }
 
   ngOnDestroy(): void {
-    this.clearGlobalAutoRefresh();
+    if (this.sharedTimer) clearInterval(this.sharedTimer);
+    if (this.uptimeTimer) clearInterval(this.uptimeTimer);
   }
 
-  public selectAutoRefresh(seconds: AutoRefreshSeconds): void {
-    this.autoRefreshSeconds = seconds;
-    this.scheduleGlobalAutoRefresh();
+  private refreshMsFor(interval: Interval): number {
+    const cadence: Record<Interval, number> = {
+      '5s': 5_000, '15s': 15_000, '30s': 30_000,
+      '5m': 300_000, '15m': 900_000, '30m': 1_800_000,
+      '1h': 3_600_000, '1d': 60_000, '1w': 60_000, '1mo': 60_000
+    };
+    return cadence[interval];
   }
 
-  private scheduleGlobalAutoRefresh(): void {
-    this.clearGlobalAutoRefresh();
-    if (this.autoRefreshSeconds <= 0) return;
-    this.autoRefreshTimer = setInterval(() => this.loadOverview(true), this.autoRefreshSeconds * 1000);
+  public selectGlobalInterval(interval: Interval): void {
+    this.globalInterval = interval;
+    (['storage', 'trash', 'bandwidth'] as const).forEach(chart => this.fetchOverview(chart, true));
+    this.scheduleSharedAutoRefresh();
   }
 
-  private clearGlobalAutoRefresh(): void {
-    if (this.autoRefreshTimer) clearInterval(this.autoRefreshTimer);
+  private scheduleSharedAutoRefresh(): void {
+    if (this.sharedTimer) clearInterval(this.sharedTimer);
+    const ms = this.refreshMsFor(this.globalInterval);
+    this.sharedTimer = setInterval(() => {
+      (['storage', 'trash', 'bandwidth'] as const).forEach(chart => this.fetchOverview(chart, true));
+    }, ms);
+  }
+
+  private scheduleUptimeAutoRefresh(): void {
+    if (this.uptimeTimer) clearInterval(this.uptimeTimer);
+    const ms = this.refreshMsFor(this.uptimeInterval);
+    this.uptimeTimer = setInterval(() => this.fetchOverview('uptime', true), ms);
   }
 
   public loadOverview(force = false): void {
@@ -159,12 +172,10 @@ export class AppComponent implements OnDestroy {
     });
   }
 
-  public selectChartInterval(chart: ChartKey, interval: Interval): void {
-    if (chart === 'storage') this.storageInterval = interval;
-    if (chart === 'trash') this.trashInterval = interval;
-    if (chart === 'bandwidth') this.bandwidthInterval = interval;
-    if (chart === 'uptime') this.uptimeInterval = interval;
-    this.fetchOverview(chart);
+  public selectUptimeInterval(interval: Interval): void {
+    this.uptimeInterval = interval;
+    this.fetchOverview('uptime', true);
+    this.scheduleUptimeAutoRefresh();
   }
 
   public selectChartRange(chart: ChartKey, range: Range): void {

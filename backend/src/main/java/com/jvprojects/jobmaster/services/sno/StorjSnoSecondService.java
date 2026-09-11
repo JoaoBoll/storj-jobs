@@ -130,8 +130,8 @@ public class StorjSnoSecondService {
         if (satellites == null) return;
 
         // Set estimated payout early if available
-        if (node != null && node.getStorjSatellites() != null && node.getStorjSatellites().getStorjEstimatedPayout() != null) {
-            com.jvprojects.jobmaster.entities.StorjEstimatedPayout estimatedPayout = node.getStorjSatellites().getStorjEstimatedPayout();
+        if (node != null && node.getStorjEstimatedPayout() != null) {
+            com.jvprojects.jobmaster.entities.StorjEstimatedPayout estimatedPayout = node.getStorjEstimatedPayout();
             if (estimatedPayout.getCurrentMonthExpectations() != null) {
                 second.setEstimatedPayout(estimatedPayout.getCurrentMonthExpectations());
             }

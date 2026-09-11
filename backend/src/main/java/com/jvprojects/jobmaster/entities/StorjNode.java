@@ -4,6 +4,7 @@ import com.jvprojects.jobmaster.entities.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Table;
 import lombok.Data;
 
@@ -20,6 +21,9 @@ public class StorjNode extends BaseEntity {
 
     @OneToOne(mappedBy = "storjNode")
     private StorjSatellites storjSatellites;
+
+    @OneToOne(mappedBy = "storjNode", cascade = CascadeType.ALL)
+    private StorjEstimatedPayout storjEstimatedPayout;
 
     @Column
     private Boolean enabled;

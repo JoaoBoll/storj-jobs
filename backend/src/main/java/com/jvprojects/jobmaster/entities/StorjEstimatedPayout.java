@@ -11,6 +11,10 @@ import java.math.BigDecimal;
 @Table(name = "storj_estimated_payout")
 public class StorjEstimatedPayout extends BaseEntity {
 
+    @OneToOne
+    @JoinColumn(name = "storj_node_id", nullable = false)
+    private StorjNode storjNode;
+
     @OneToOne(mappedBy = "storjEstimatedPayout")
     @JoinColumn(name = "current_month_id", referencedColumnName = "id")
     private MonthData currentMonth;

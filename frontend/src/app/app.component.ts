@@ -1,8 +1,11 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { SplineAreaChartComponent } from "./shared/charts/spline-area-chart/spline-area-chart.component";
+import { SplineAreaChartComponent } from './shared/charts/spline-area-chart/spline-area-chart.component';
 import { ChartOptions } from './models/chart-options.model';
+
+type Unit = 'MB' | 'GB' | 'TB';
+type Interval = '5m' | '15m' | '30m' | '1h';
 
 interface NodeResponse {
   id: string;
@@ -12,8 +15,6 @@ interface NodeResponse {
   availableDiskSpace: number | null;
   usedDiskSpace: number | null;
   totalDiskSpace: number | null;
-  createdAt: string | null;
-  updatedAt: string | null;
 }
 
 interface NodeCard {
@@ -27,19 +28,21 @@ interface NodeCard {
   accent: string;
 }
 
-interface OverviewResponse {
-  nodes: OverviewNode[];
-}
-
-interface OverviewNode {
-  nodeId: string;
+interface OverviewPoint {
+  label: string;
   storageUsed: number | null;
-  storageFirstInterval: number | null;
+  storagePercentOfFirst: number;
   trashUsed: number | null;
-  trashFirstInterval: number | null;
+  trashPercentOfFirst: number;
   ingressTotal: number | null;
   egressTotal: number | null;
-  uptimePercent: number | null;
+  uptimePercent: number;
+}
+
+interface OverviewResponse {
+  interval: Interval;
+  points: number;
+  data: OverviewPoint[];
 }
 
 @Component({
@@ -49,17 +52,18 @@ interface OverviewNode {
   imports: [CommonModule, SplineAreaChartComponent]
 })
 export class AppComponent {
-
   public activeView = 'Nodes';
   public lastSync = new Date();
   public toastMessage = '';
-  public displayUnit: 'MB' | 'GB' | 'TB' = 'GB';
-  public overview: OverviewResponse = { nodes: [] };
-  public storageChart!: ChartOptions;
-  public trashChart!: ChartOptions;
-  public bandwidthChart!: ChartOptions;
-  public uptimeChart!: ChartOptions;
-
+  public storageUnit: Unit = 'GB';
+  public trashUnit: Unit = 'GB';
+  public bandwidthUnit: Unit = 'GB';
+  public interval: Interval = '5m';
+  public overview: OverviewResponse = { interval: '5m', points: 30, data: [] };
+  public storageChart = this.createChart('#c7f36b', 'Storage used');
+  public trashChart = this.createChart('#f4bb61', 'Trash');
+  public bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
+  public uptimeChart = this.createChart('#83a9ff', 'Uptime %');
   public nodes: NodeCard[] = [];
 
   public readonly jobs = [
@@ -72,76 +76,86 @@ export class AppComponent {
   ];
 
   constructor(private readonly http: HttpClient) {
-    this.storageChart = this.createChart('#c7f36b', 'Storage used');
-    this.trashChart = this.createChart('#f4bb61', 'Trash');
-    this.bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
-    this.uptimeChart = this.createChart('#83a9ff', 'Uptime %');
-
     this.loadNodes();
     this.loadOverview();
   }
 
   public loadOverview(): void {
-    this.http.get<OverviewResponse>('/api/job/overview').subscribe({
+    this.http.get<OverviewResponse>(`/api/job/overview?interval=${this.interval}`).subscribe({
       next: (overview) => {
         this.overview = overview;
         this.updateOverviewCharts();
+        this.lastSync = new Date();
       },
-      error: () => {
-        this.toastMessage = 'Não foi possível carregar o overview';
-      }
+      error: () => this.toastMessage = 'Não foi possível carregar o overview'
     });
+  }
+
+  public selectInterval(interval: Interval): void {
+    this.interval = interval;
+    this.loadOverview();
+  }
+
+  public selectUnit(chart: 'storage' | 'trash' | 'bandwidth', unit: Unit): void {
+    if (chart === 'storage') this.storageUnit = unit;
+    if (chart === 'trash') this.trashUnit = unit;
+    if (chart === 'bandwidth') this.bandwidthUnit = unit;
+    this.updateOverviewCharts();
+  }
+
+  public updateOverviewCharts(): void {
+    const labels = this.overview.data.map(point => this.formatLabel(point.label));
+    this.storageChart = { ...this.storageChart, series: [
+      { name: `Storage used (${this.storageUnit})`, data: this.overview.data.map(point => this.toUnit(point.storageUsed, this.storageUnit)) },
+      { name: '% of first', data: this.overview.data.map(point => point.storagePercentOfFirst) }
+    ], xaxis: { ...this.storageChart.xaxis, categories: labels } };
+    this.trashChart = { ...this.trashChart, series: [
+      { name: `Trash (${this.trashUnit})`, data: this.overview.data.map(point => this.toUnit(point.trashUsed, this.trashUnit)) },
+      { name: '% of first', data: this.overview.data.map(point => point.trashPercentOfFirst) }
+    ], xaxis: { ...this.trashChart.xaxis, categories: labels } };
+    this.bandwidthChart = {
+      ...this.bandwidthChart,
+      series: [
+        { name: 'Ingress', data: this.overview.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit)) },
+        { name: 'Egress', data: this.overview.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit)) }
+      ],
+      xaxis: { ...this.bandwidthChart.xaxis, categories: labels }
+    };
+    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', this.overview.data.map(point => point.uptimePercent), labels);
   }
 
   public createChart(color: string, name: string): ChartOptions {
     return {
       series: [{ name, data: [] }],
-      chart: { height: 260, type: 'bar', toolbar: { show: false }, background: 'transparent' },
-      dataLabels: { enabled: false }, colors: [color], stroke: { width: 2 },
+      chart: { height: 260, type: 'line', toolbar: { show: false }, background: 'transparent' },
+      dataLabels: { enabled: false }, colors: [color], stroke: { curve: 'smooth', width: 2 },
       xaxis: { categories: [], labels: { style: { colors: '#6f7b83' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-      yaxis: { labels: { style: { colors: '#6f7b83' } } }, grid: { borderColor: '#26323a', strokeDashArray: 4 }, legend: { show: false }, tooltip: { theme: 'dark' }
+      yaxis: { labels: { style: { colors: '#6f7b83' } } }, grid: { borderColor: '#26323a', strokeDashArray: 4 }, legend: { show: true, labels: { colors: '#849197' } }, tooltip: { theme: 'dark' }
     };
   }
 
-  public updateOverviewCharts(): void {
-    const categories = this.overview.nodes.map(node => node.nodeId.slice(0, 8));
-    this.storageChart = { ...this.storageChart, series: [{ name: 'Storage used', data: this.overview.nodes.map(node => this.toUnit(node.storageUsed)) }], xaxis: { ...this.storageChart.xaxis, categories } };
-    this.trashChart = { ...this.trashChart, series: [{ name: 'Trash', data: this.overview.nodes.map(node => this.toUnit(node.trashUsed)) }], xaxis: { ...this.trashChart.xaxis, categories } };
-    this.bandwidthChart = { ...this.bandwidthChart, series: [{ name: 'Ingress', data: this.overview.nodes.map(node => this.toUnit(node.ingressTotal)) }, { name: 'Egress', data: this.overview.nodes.map(node => this.toUnit(node.egressTotal)) }], xaxis: { ...this.bandwidthChart.xaxis, categories } };
-    this.uptimeChart = { ...this.uptimeChart, series: [{ name: 'Uptime %', data: this.overview.nodes.map(node => node.uptimePercent ?? 0) }], xaxis: { ...this.uptimeChart.xaxis, categories } };
+  public withData(chart: ChartOptions, name: string, data: number[], labels: string[]): ChartOptions {
+    return { ...chart, series: [{ name, data }], xaxis: { ...chart.xaxis, categories: labels } };
   }
 
-  public averageUptime(): number {
-    if (!this.overview.nodes.length) return 0;
-    return this.overview.nodes.reduce((total, node) => total + (node.uptimePercent ?? 0), 0) / this.overview.nodes.length;
+  public formatLabel(label: string): string {
+    const date = new Date(label);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
   }
 
-  public percentOfFirst(current: number | null, first: number | null): number {
-    if (current === null || first === null || first === 0) return 0;
-    return (current / Math.abs(first)) * 100;
+  public toUnit(bytes: number | null, unit: Unit): number {
+    if (bytes === null || bytes === undefined) return 0;
+    const divisor = { MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }[unit];
+    return Number((bytes / divisor).toFixed(2));
   }
 
-  public averageStorageChange(): number {
-    if (!this.overview.nodes.length) return 0;
-    return this.overview.nodes.reduce((total, node) => total + this.percentOfFirst(node.storageUsed, node.storageFirstInterval), 0) / this.overview.nodes.length;
+  public formatValue(bytes: number | null): string {
+    return bytes === null || bytes === undefined ? 'Não informado' : `${this.toUnit(bytes, 'GB')} GB`;
   }
 
-  public averageTrashChange(): number {
-    if (!this.overview.nodes.length) return 0;
-    return this.overview.nodes.reduce((total, node) => total + this.percentOfFirst(node.trashUsed, node.trashFirstInterval), 0) / this.overview.nodes.length;
-  }
-
-  public toUnit(bytes: number | null): number {
-    if (bytes === null || bytes === undefined) {
-      return 0;
-    }
-    const divisors = { MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 };
-    return Number((bytes / divisors[this.displayUnit]).toFixed(2));
-  }
-
-  public selectUnit(unit: 'MB' | 'GB' | 'TB'): void {
-    this.displayUnit = unit;
-    this.updateOverviewCharts();
+  public diskUsage(node: NodeCard): number {
+    if (!node.usedDiskSpace || !node.totalDiskSpace) return 0;
+    return Math.min(100, Math.round((node.usedDiskSpace / node.totalDiskSpace) * 100));
   }
 
   public loadNodes(): void {
@@ -159,9 +173,7 @@ export class AppComponent {
         }));
         this.lastSync = new Date();
       },
-      error: () => {
-        this.toastMessage = 'Não foi possível carregar os nodes registrados';
-      }
+      error: () => this.toastMessage = 'Não foi possível carregar os nodes registrados'
     });
   }
 
@@ -169,39 +181,7 @@ export class AppComponent {
     return this.nodes.filter(node => node.status === 'Online').length;
   }
 
-  public formatBytes(bytes: number | null): string {
-    if (bytes === null || bytes === undefined) {
-      return 'Não informado';
-    }
-    if (bytes === 0) {
-      return '0 B';
-    }
-    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-    const unitIndex = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, unitIndex)).toFixed(1)} ${units[unitIndex]}`;
-  }
-
-  public formatDelta(bytes: number): string {
-    const sign = bytes > 0 ? '+' : '';
-    return `${sign}${this.formatValue(bytes)}`;
-  }
-
-  public formatValue(bytes: number | null): string {
-    if (bytes === null || bytes === undefined) {
-      return 'Não informado';
-    }
-    return `${this.toUnit(bytes)} ${this.displayUnit}`;
-  }
-
-  public diskUsage(node: NodeCard): number {
-    if (!node.usedDiskSpace || !node.totalDiskSpace) {
-      return 0;
-    }
-    return Math.min(100, Math.round((node.usedDiskSpace / node.totalDiskSpace) * 100));
-  }
-
   public selectView(view: string): void {
     this.activeView = view;
   }
-
 }

@@ -93,7 +93,7 @@ export class AppComponent implements OnDestroy {
   public uptimeDeltaText = '';
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
-  public bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
+  public bandwidthChart = { ...this.createChart('#5bd6e8', 'Bandwidth'), colors: ['#34d399', '#fb7185'] }; // Ingress (in) / Egress (out)
   public payoutChart = this.createChart('#1dd1a1', 'Estimated Payout');
   public uptimeChart = this.createChart('#83a9ff', 'Uptime %');
   public nodes: NodeCard[] = [];

@@ -4,6 +4,26 @@ import { HttpClient } from '@angular/common/http';
 import { SplineAreaChartComponent } from "./shared/charts/spline-area-chart/spline-area-chart.component";
 import { ChartOptions } from './models/chart-options.model';
 
+interface NodeResponse {
+  id: string;
+  nodeId: string;
+  url: string;
+  enabled: boolean;
+  availableDiskSpace: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface NodeCard {
+  name: string;
+  id: string;
+  url: string;
+  status: string;
+  storage: string;
+  availableDiskSpace: number | null;
+  accent: string;
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -18,11 +38,7 @@ export class AppComponent {
   public toastMessage = '';
   public chartOptions: ChartOptions;
 
-  public readonly nodes = [
-    { name: 'Node Alpha', id: '12f8...a91c', url: 'http://node-alpha:14002', status: 'Online', uptime: '99.98%', storage: '7.8 TB', used: 68, bandwidth: '42.6 TB', accent: 'lime' },
-    { name: 'Node Beta', id: '84bc...0d72', url: 'http://node-beta:14002', status: 'Online', uptime: '99.94%', storage: '5.2 TB', used: 44, bandwidth: '28.1 TB', accent: 'cyan' },
-    { name: 'Node Gamma', id: 'c20a...f15e', url: 'http://node-gamma:14002', status: 'Degraded', uptime: '97.41%', storage: '3.6 TB', used: 82, bandwidth: '16.8 TB', accent: 'amber' }
-  ];
+  public nodes: NodeCard[] = [];
 
   public readonly jobs = [
     { label: 'SNO second', endpoint: 'snoSeconds', cadence: 'Every 5 seconds', state: 'Running', lastRun: '12 sec ago', tone: 'green' },
@@ -54,6 +70,44 @@ export class AppComponent {
       legend: { show: false },
       tooltip: { theme: 'dark' }
     }
+
+    this.loadNodes();
+  }
+
+  public loadNodes(): void {
+    this.http.get<NodeResponse[]>('/api/job/nodes').subscribe({
+      next: (nodes) => {
+        this.nodes = nodes.map((node, index) => ({
+          name: `Node ${(node.nodeId || node.id).slice(0, 8)}`,
+          id: node.nodeId || node.id,
+          url: node.url,
+          status: node.enabled ? 'Online' : 'Disabled',
+          storage: this.formatBytes(node.availableDiskSpace),
+          availableDiskSpace: node.availableDiskSpace,
+          accent: ['lime', 'cyan', 'amber'][index % 3]
+        }));
+        this.lastSync = new Date();
+      },
+      error: () => {
+        this.toastMessage = 'Não foi possível carregar os nodes registrados';
+      }
+    });
+  }
+
+  public get onlineNodes(): number {
+    return this.nodes.filter(node => node.status === 'Online').length;
+  }
+
+  public formatBytes(bytes: number | null): string {
+    if (bytes === null || bytes === undefined) {
+      return 'Não informado';
+    }
+    if (bytes === 0) {
+      return '0 B';
+    }
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const unitIndex = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, unitIndex)).toFixed(1)} ${units[unitIndex]}`;
   }
 
   public selectView(view: string): void {

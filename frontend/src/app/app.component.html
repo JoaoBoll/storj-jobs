@@ -35,7 +35,7 @@
 			</div>
 			<div class="topbar-actions">
 				<span class="sync-time">Last sync {{ lastSync | date:'HH:mm:ss' }}</span>
-				<button class="icon-button" type="button" title="Refresh data" (click)="lastSync = now()">&#8635;</button>
+				<button class="icon-button" type="button" title="Refresh data" (click)="loadNodes()">&#8635;</button>
 				<div class="avatar">JM</div>
 			</div>
 		</header>
@@ -51,8 +51,8 @@
 		<section class="metric-grid">
 			<article class="metric-card accent-lime">
 				<div class="metric-heading"><span>Active nodes</span><span class="metric-symbol">[]</span></div>
-				<strong>{{ nodes.length }}<small> / {{ nodes.length }}</small></strong>
-				<div class="metric-foot"><span class="positive">+1.2%</span><span>vs last hour</span></div>
+				<strong>{{ onlineNodes }}<small> / {{ nodes.length }}</small></strong>
+				<div class="metric-foot"><span class="positive">Live</span><span>registered nodes</span></div>
 			</article>
 			<article class="metric-card accent-cyan">
 				<div class="metric-heading"><span>Storage used</span><span class="metric-symbol">#</span></div>
@@ -82,8 +82,8 @@
 
 			<article class="panel health-panel">
 				<div class="panel-header"><div><p class="eyebrow">Fleet status</p><h3>Node health</h3></div><span class="health-score">99.7%</span></div>
-				<div class="health-ring"><div><strong>3</strong><span>nodes online</span></div></div>
-				<div class="health-list"><div><span class="status-dot online"></span><span>Online</span><strong>2</strong></div><div><span class="status-dot degraded"></span><span>Degraded</span><strong>1</strong></div><div><span class="status-dot offline"></span><span>Offline</span><strong>0</strong></div></div>
+				<div class="health-ring"><div><strong>{{ onlineNodes }}</strong><span>nodes online</span></div></div>
+				<div class="health-list"><div><span class="status-dot online"></span><span>Online</span><strong>{{ onlineNodes }}</strong></div><div><span class="status-dot degraded"></span><span>Disabled</span><strong>{{ nodes.length - onlineNodes }}</strong></div></div>
 			</article>
 		</section>
 
@@ -92,9 +92,8 @@
 			<article class="node-card" *ngFor="let node of nodes">
 				<div class="node-card-top"><div class="node-avatar" [ngClass]="node.accent">S</div><div><h4>{{ node.name }}</h4><span class="node-id">{{ node.id }}</span></div><span class="node-status" [class.degraded-status]="node.status === 'Degraded'"><i></i>{{ node.status }}</span></div>
 				<div class="node-url">{{ node.url }} <span>...</span></div>
-				<div class="node-stats"><div><span>Uptime</span><strong>{{ node.uptime }}</strong></div><div><span>Bandwidth</span><strong>{{ node.bandwidth }}</strong></div></div>
-				<div class="storage-row"><div><span>Storage capacity</span><strong>{{ node.storage }}</strong></div><span>{{ node.used }}%</span></div>
-				<div class="progress"><span [style.width.%]="node.used" [class]="node.accent"></span></div>
+				<div class="node-stats"><div><span>Node ID</span><strong>{{ node.id }}</strong></div><div><span>Database status</span><strong>{{ node.status }}</strong></div></div>
+				<div class="storage-row"><div><span>Available disk space</span><strong>{{ node.storage }}</strong></div></div>
 				<button class="node-link" type="button">View node details <span>-></span></button>
 			</article>
 		</section>

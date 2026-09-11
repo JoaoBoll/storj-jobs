@@ -169,7 +169,7 @@ public class ApiController {
                 .filter(audit -> !audit.getCreatedAt().isBefore(start) && audit.getCreatedAt().isBefore(end))
                 .map(Audits::getOnlineScore)
                 .toList();
-        return scores.isEmpty() ? 0 : scores.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(0) * 100;
+        return scores.isEmpty() ? 100 : scores.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(0) * 100;
     }
 
     private Long totalIngress(StorjSatellites satellites) {

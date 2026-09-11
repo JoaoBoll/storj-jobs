@@ -237,7 +237,7 @@ export class AppComponent {
     const labels = data.data.map(point => this.formatLabel(point.label, this.uptimeInterval));
     const values = data.data.map(point => point.uptimePercent);
     this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', values, labels);
-    const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 100;
     this.uptimeSummary = `Average: ${average.toFixed(2)}%`;
   }
 

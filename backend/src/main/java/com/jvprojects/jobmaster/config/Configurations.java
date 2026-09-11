@@ -4,8 +4,8 @@ import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @Component
@@ -15,7 +15,10 @@ public class Configurations {
     private String urlsRaw;
 
     public List<String> getUrls() {
-        return Arrays.asList(urlsRaw.split(","));
+        return Arrays.stream(urlsRaw.split(","))
+                .map(String::trim)
+                .filter(url -> !url.isBlank())
+                .collect(Collectors.toList());
     }
 
 }

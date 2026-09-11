@@ -39,6 +39,7 @@ interface OverviewPoint {
   trashPercentOfFirst: number;
   ingressTotal: number | null;
   egressTotal: number | null;
+  totalBandwidthUsed: number | null;
   uptimePercent: number;
   estimatedPayout: number | null;
 }
@@ -287,8 +288,42 @@ export class AppComponent implements OnDestroy {
     this.trashDeltaText = this.formatDelta(displayValues, unit);
   }
 
+  // Storj's satellite API only reports ingress/egress at daily granularity, refreshed by our
+  // once-a-minute poll - so below 1 minute those fields don't move between ticks. usedBandwidth
+  // instead comes straight from /api/sno/ on every 5s job run, so it's the only signal with real
+  // sub-minute resolution; we show it as a single combined series instead of ingress/egress there.
+  private isSubMinuteInterval(interval: Interval): boolean {
+    return interval === '5s' || interval === '15s' || interval === '30s';
+  }
+
   private updateBandwidthChart(): void {
     const data = this.overviewFor(this.bandwidthInterval, this.bandwidthRange);
+
+    if (this.isSubMinuteInterval(this.bandwidthInterval)) {
+      const rawTotal = data.data.map(point => point.totalBandwidthUsed ?? 0);
+      const unit = this.resolveUnit(this.bandwidthUnit, this.representativeBytes(rawTotal));
+      const totalValues = rawTotal.map(bytes => this.toUnit(bytes, unit));
+      const totalDeltas = this.toBandwidthDeltaSeries(totalValues);
+      const displayTotalDeltas = totalDeltas.slice(-this.bandwidthRange);
+      const displayTotalValues = totalValues.slice(-this.bandwidthRange);
+      const displayLabels = data.data.slice(-this.bandwidthRange).map(point => this.formatLabel(point.label, this.bandwidthInterval));
+      this.bandwidthChart = {
+        ...this.bandwidthChart,
+        series: [{ name: 'Bandwidth', data: displayTotalDeltas }],
+        xaxis: { ...this.bandwidthChart.xaxis, categories: displayLabels },
+        tooltip: this.buildSignedTooltip(unit, [
+          { name: 'Bandwidth', values: displayTotalDeltas, totals: displayTotalValues }
+        ])
+      };
+      const total = this.formatNumber(displayTotalValues.length ? displayTotalValues[displayTotalValues.length - 1] : 0);
+      this.bandwidthSummary = `Total Bandwidth: ${total} ${unit} (ingress/egress split not available below 1m)`;
+      this.bandwidthIngressTotal = `${total} ${unit}`;
+      this.bandwidthEgressTotal = '-';
+      this.bandwidthIngressDeltaText = this.formatDelta(displayTotalValues, unit);
+      this.bandwidthEgressDeltaText = '';
+      return;
+    }
+
     const rawIngress = data.data.map(point => point.ingressTotal ?? 0);
     const rawEgress = data.data.map(point => point.egressTotal ?? 0);
     const unit = this.resolveUnit(this.bandwidthUnit, Math.max(this.representativeBytes(rawIngress), this.representativeBytes(rawEgress)));

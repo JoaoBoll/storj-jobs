@@ -73,6 +73,7 @@ public class ApiController {
         long lastTrash = 0;
         long lastIngress = 0;
         long lastEgress = 0;
+        long lastTotalBandwidth = 0;
         double lastUptime = 100;
         java.math.BigDecimal lastPayout = java.math.BigDecimal.ZERO;
 
@@ -90,6 +91,7 @@ public class ApiController {
             long trash;
             long ingress;
             long egress;
+            long totalBandwidth;
             double uptime;
             java.math.BigDecimal payout;
 
@@ -98,6 +100,7 @@ public class ApiController {
                 trash = lastTrash;
                 ingress = lastIngress;
                 egress = lastEgress;
+                totalBandwidth = lastTotalBandwidth;
                 uptime = lastUptime;
                 payout = lastPayout;
             } else {
@@ -105,6 +108,10 @@ public class ApiController {
                 trash = sumOf(latest, StorjSnoSecond::getTrashDiskSpace);
                 ingress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getIngressTotal, ingressState, bucketStart);
                 egress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getEgressTotal, egressState, bucketStart);
+                // usedBandwidth is fetched fresh from /api/sno/ on every 5s job tick, unlike
+                // ingress/egress which only change when the once-a-minute satellite poll refreshes -
+                // this is the only field with genuine sub-minute resolution for bandwidth charts.
+                totalBandwidth = sumOf(latest, StorjSnoSecond::getUsedBandwidth);
                 uptime = weightedUptimeAverage(latest);
                 payout = sumOfBigDecimal(latest, StorjSnoSecond::getEstimatedPayout);
             }
@@ -113,6 +120,7 @@ public class ApiController {
             lastTrash = trash;
             lastIngress = ingress;
             lastEgress = egress;
+            lastTotalBandwidth = totalBandwidth;
             lastUptime = uptime;
             lastPayout = payout;
 
@@ -126,6 +134,7 @@ public class ApiController {
                     percentageOfFirst(trash, firstTrash),
                     ingress,
                     egress,
+                    totalBandwidth,
                     uptime,
                     payout
             ));

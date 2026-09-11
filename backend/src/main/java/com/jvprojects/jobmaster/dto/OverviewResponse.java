@@ -15,6 +15,7 @@ public record OverviewResponse(
         Double trashPercentOfFirst,
         Long ingressTotal,
         Long egressTotal,
+        Long totalBandwidthUsed,
         Double uptimePercent,
         java.math.BigDecimal estimatedPayout
     ) {

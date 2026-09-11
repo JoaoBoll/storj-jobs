@@ -93,30 +93,25 @@ export class AppComponent {
   }
 
   public loadOverview(force = false): void {
-    const combos = new Map<string, { interval: Interval; range: Range }>();
-    [
-      { interval: this.storageInterval, range: this.storageRange },
-      { interval: this.trashInterval, range: this.trashRange },
-      { interval: this.bandwidthInterval, range: this.bandwidthRange },
-      { interval: this.uptimeInterval, range: this.uptimeRange }
-    ].forEach(combo => combos.set(this.overviewKey(combo.interval, combo.range), combo));
-    combos.forEach(combo => this.fetchOverview(combo.interval, combo.range, force));
+    (['storage', 'trash', 'bandwidth', 'uptime'] as const).forEach(chart => this.fetchOverview(chart, force));
   }
 
   private overviewKey(interval: Interval, range: Range): string {
     return `${interval}:${range}`;
   }
 
-  private fetchOverview(interval: Interval, range: Range, force = false): void {
+  private fetchOverview(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime', force = false): void {
+    const interval = this.intervalFor(chart);
+    const range = this.rangeFor(chart);
     const key = this.overviewKey(interval, range);
     if (this.overviewData.has(key) && !force) {
-      this.updateOverviewCharts();
+      this.updateChart(chart);
       return;
     }
     this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}&points=${range}`).subscribe({
       next: (overview) => {
         this.overviewData.set(key, overview);
-        this.updateOverviewCharts();
+        this.updateChart(chart);
         this.lastSync = new Date();
       },
       error: () => this.toastMessage = 'Failed to load overview'
@@ -128,7 +123,7 @@ export class AppComponent {
     if (chart === 'trash') this.trashInterval = interval;
     if (chart === 'bandwidth') this.bandwidthInterval = interval;
     if (chart === 'uptime') this.uptimeInterval = interval;
-    this.fetchOverview(interval, this.rangeFor(chart));
+    this.fetchOverview(chart);
   }
 
   public selectChartRange(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime', range: Range): void {
@@ -136,7 +131,7 @@ export class AppComponent {
     if (chart === 'trash') this.trashRange = range;
     if (chart === 'bandwidth') this.bandwidthRange = range;
     if (chart === 'uptime') this.uptimeRange = range;
-    this.fetchOverview(this.intervalFor(chart), range);
+    this.fetchOverview(chart);
   }
 
   private intervalFor(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): Interval {
@@ -157,7 +152,7 @@ export class AppComponent {
     if (chart === 'storage') this.storageUnit = unit;
     else if (chart === 'trash') this.trashUnit = unit;
     else if (chart === 'bandwidth') this.bandwidthUnit = unit;
-    this.updateOverviewCharts();
+    this.updateChart(chart);
   }
 
   private overviewFor(interval: Interval, range: Range): OverviewResponse {
@@ -172,47 +167,60 @@ export class AppComponent {
     return this.overviewFor(this.uptimeInterval, this.uptimeRange);
   }
 
-  public updateOverviewCharts(): void {
-    const storageData = this.overviewFor(this.storageInterval, this.storageRange);
-    const trashData = this.overviewFor(this.trashInterval, this.trashRange);
-    const bandwidthData = this.overviewFor(this.bandwidthInterval, this.bandwidthRange);
-    const uptimeData = this.overviewFor(this.uptimeInterval, this.uptimeRange);
+  private updateChart(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): void {
+    if (chart === 'storage') this.updateStorageChart();
+    else if (chart === 'trash') this.updateTrashChart();
+    else if (chart === 'bandwidth') this.updateBandwidthChart();
+    else this.updateUptimeChart();
+  }
 
-    const storageLabels = storageData.data.map(point => this.formatLabel(point.label, this.storageInterval));
-    const trashLabels = trashData.data.map(point => this.formatLabel(point.label, this.trashInterval));
-    const bandwidthLabels = bandwidthData.data.map(point => this.formatLabel(point.label, this.bandwidthInterval));
-    const uptimeLabels = uptimeData.data.map(point => this.formatLabel(point.label, this.uptimeInterval));
-
-    const storageValues = storageData.data.map(point => this.toUnit(point.storageUsed, this.storageUnit));
-    const trashValues = trashData.data.map(point => this.toUnit(point.trashUsed, this.trashUnit));
-
+  private updateStorageChart(): void {
+    const data = this.overviewFor(this.storageInterval, this.storageRange);
+    const labels = data.data.map(point => this.formatLabel(point.label, this.storageInterval));
+    const values = data.data.map(point => this.toUnit(point.storageUsed, this.storageUnit));
     this.storageChart = {
       ...this.storageChart,
-      series: [{ name: `Storage used (${this.storageUnit})`, data: storageValues }],
-      xaxis: { ...this.storageChart.xaxis, categories: storageLabels },
-      tooltip: this.buildDeltaTooltip(this.storageUnit, storageValues)
+      series: [{ name: `Storage used (${this.storageUnit})`, data: values }],
+      xaxis: { ...this.storageChart.xaxis, categories: labels },
+      tooltip: this.buildDeltaTooltip(this.storageUnit, values)
     };
+  }
+
+  private updateTrashChart(): void {
+    const data = this.overviewFor(this.trashInterval, this.trashRange);
+    const labels = data.data.map(point => this.formatLabel(point.label, this.trashInterval));
+    const values = data.data.map(point => this.toUnit(point.trashUsed, this.trashUnit));
     this.trashChart = {
       ...this.trashChart,
-      series: [{ name: `Trash (${this.trashUnit})`, data: trashValues }],
-      xaxis: { ...this.trashChart.xaxis, categories: trashLabels },
-      tooltip: this.buildDeltaTooltip(this.trashUnit, trashValues)
+      series: [{ name: `Trash (${this.trashUnit})`, data: values }],
+      xaxis: { ...this.trashChart.xaxis, categories: labels },
+      tooltip: this.buildDeltaTooltip(this.trashUnit, values)
     };
-    const ingressValues = bandwidthData.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit));
-    const egressValues = bandwidthData.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit));
+  }
+
+  private updateBandwidthChart(): void {
+    const data = this.overviewFor(this.bandwidthInterval, this.bandwidthRange);
+    const labels = data.data.map(point => this.formatLabel(point.label, this.bandwidthInterval));
+    const ingressValues = data.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit));
+    const egressValues = data.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit));
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
         { name: 'Ingress', data: ingressValues },
         { name: 'Egress', data: egressValues }
       ],
-      xaxis: { ...this.bandwidthChart.xaxis, categories: bandwidthLabels },
+      xaxis: { ...this.bandwidthChart.xaxis, categories: labels },
       tooltip: this.buildPreviousDeltaTooltip(this.bandwidthUnit, [
         { name: 'Ingress', values: ingressValues },
         { name: 'Egress', values: egressValues }
       ])
     };
-    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', uptimeData.data.map(point => point.uptimePercent), uptimeLabels);
+  }
+
+  private updateUptimeChart(): void {
+    const data = this.overviewFor(this.uptimeInterval, this.uptimeRange);
+    const labels = data.data.map(point => this.formatLabel(point.label, this.uptimeInterval));
+    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', data.data.map(point => point.uptimePercent), labels);
   }
 
   private percentChange(values: number[], index: number): number {

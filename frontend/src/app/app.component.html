@@ -54,24 +54,24 @@
 
 		<section class="metric-grid" *ngIf="activeView === 'Overview'">
 			<article class="metric-card accent-lime">
-				<div class="metric-heading"><span>Active nodes</span><span class="metric-symbol">[]</span></div>
-				<strong>{{ onlineNodes }}<small> / {{ nodes.length }}</small></strong>
-				<div class="metric-foot"><span class="positive">Live</span><span>registered nodes</span></div>
+				<div class="metric-heading"><span>Storage</span><span class="metric-symbol">#</span></div>
+				<strong>{{ storageSummary }}</strong>
+				<div class="metric-foot"><span class="positive">{{ storageInterval }}</span><span>latest point</span></div>
 			</article>
 			<article class="metric-card accent-cyan">
-				<div class="metric-heading"><span>Storage usage</span><span class="metric-symbol">#</span></div>
-				<strong>{{ storageOverview.points }} <small>points</small></strong>
-				<div class="metric-foot"><span class="positive">{{ storageInterval }}</span><span>selected interval</span></div>
+				<div class="metric-heading"><span>Trash</span><span class="metric-symbol">#</span></div>
+				<strong>{{ trashSummary }}</strong>
+				<div class="metric-foot"><span class="positive">{{ trashInterval }}</span><span>latest point</span></div>
 			</article>
 			<article class="metric-card accent-blue">
-				<div class="metric-heading"><span>Uptime average</span><span class="metric-symbol">%</span></div>
-				<strong>{{ uptimeOverview.data.length ? (uptimeOverview.data[uptimeOverview.data.length - 1].uptimePercent | number:'1.2-2') : 0 }}<small>%</small></strong>
-				<div class="metric-foot"><span class="positive">All satellites</span><span>per node</span></div>
+				<div class="metric-heading"><span>Bandwidth</span><span class="metric-symbol">#</span></div>
+				<strong>{{ bandwidthIngressTotal }}<small> ingress</small></strong>
+				<div class="metric-foot"><span class="positive">{{ bandwidthEgressTotal }} egress</span><span>{{ bandwidthInterval }}</span></div>
 			</article>
 			<article class="metric-card accent-amber">
-				<div class="metric-heading"><span>Capacity</span><span class="metric-symbol">#</span></div>
-				<strong>{{ storageOverview.data.length ? (storageOverview.data[storageOverview.data.length - 1].storagePercentOfFirst | number:'1.1-1') : 0 }}<small>%</small></strong>
-				<div class="metric-foot"><span class="positive">vs first point</span><span>storage change</span></div>
+				<div class="metric-heading"><span>Availability</span><span class="metric-symbol">%</span></div>
+				<strong>{{ uptimeSummary }}</strong>
+				<div class="metric-foot"><span class="positive">{{ uptimeInterval }}</span><span>average in range</span></div>
 			</article>
 		</section>
 

@@ -71,7 +71,11 @@ export class AppComponent {
   public bandwidthRange: Range = 30;
   public uptimeRange: Range = 30;
   private readonly overviewData = new Map<string, OverviewResponse>();
+  public storageSummary = '';
+  public trashSummary = '';
   public bandwidthSummary = '';
+  public bandwidthIngressTotal = '';
+  public bandwidthEgressTotal = '';
   public uptimeSummary = '';
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
@@ -186,6 +190,8 @@ export class AppComponent {
       xaxis: { ...this.storageChart.xaxis, categories: labels },
       tooltip: this.buildDeltaTooltip(this.storageUnit, values)
     };
+    const latest = values.length ? values[values.length - 1] : 0;
+    this.storageSummary = `${this.formatNumber(latest)} ${this.storageUnit}`;
   }
 
   private updateTrashChart(): void {
@@ -198,6 +204,8 @@ export class AppComponent {
       xaxis: { ...this.trashChart.xaxis, categories: labels },
       tooltip: this.buildDeltaTooltip(this.trashUnit, values)
     };
+    const latest = values.length ? values[values.length - 1] : 0;
+    this.trashSummary = `${this.formatNumber(latest)} ${this.trashUnit}`;
   }
 
   private updateBandwidthChart(): void {
@@ -220,6 +228,8 @@ export class AppComponent {
     const totalIngress = this.formatNumber(ingressValues.reduce((sum, value) => sum + value, 0));
     const totalEgress = this.formatNumber(egressValues.reduce((sum, value) => sum + value, 0));
     this.bandwidthSummary = `Total Ingress: ${totalIngress} ${this.bandwidthUnit} · Total Egress: ${totalEgress} ${this.bandwidthUnit}`;
+    this.bandwidthIngressTotal = `${totalIngress} ${this.bandwidthUnit}`;
+    this.bandwidthEgressTotal = `${totalEgress} ${this.bandwidthUnit}`;
   }
 
   private updateUptimeChart(): void {
@@ -280,7 +290,7 @@ export class AppComponent {
   public createChart(color: string, name: string): ChartOptions {
     return {
       series: [{ name, data: [] }],
-      chart: { height: 260, type: 'line', toolbar: { show: false }, background: 'transparent' },
+      chart: { height: 260, type: 'line', toolbar: { show: false }, background: 'transparent', zoom: { enabled: false } },
       dataLabels: { enabled: false }, colors: [color], stroke: { curve: 'smooth', width: 2 },
       xaxis: { categories: [], labels: { style: { colors: '#6f7b83' } }, axisBorder: { show: false }, axisTicks: { show: false } },
       yaxis: { labels: { style: { colors: '#6f7b83' }, formatter: (value: number) => this.formatNumber(value) } },

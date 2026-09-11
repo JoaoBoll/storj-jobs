@@ -1,5 +1,6 @@
 package com.jvprojects.jobmaster.dto;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -13,6 +14,9 @@ public record StorjNodeResponse(
         Long totalDiskSpace,
         String color,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        BigDecimal currentMonthPayout,
+        BigDecimal previousMonthPayout,
+        BigDecimal currentMonthExpectations
 ) {
 }

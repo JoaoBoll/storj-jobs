@@ -18,6 +18,9 @@ interface NodeResponse {
   usedDiskSpace: number | null;
   totalDiskSpace: number | null;
   color: string | null;
+  currentMonthPayout: number | null;
+  previousMonthPayout: number | null;
+  currentMonthExpectations: number | null;
 }
 
 interface NodeCard {
@@ -29,6 +32,9 @@ interface NodeCard {
   usedDiskSpace: number | null;
   totalDiskSpace: number | null;
   color: string;
+  currentMonthPayout: number | null;
+  previousMonthPayout: number | null;
+  currentMonthExpectations: number | null;
 }
 
 interface OverviewPoint {
@@ -509,6 +515,24 @@ export class AppComponent implements OnDestroy {
     return Math.min(100, Math.round((node.usedDiskSpace / node.totalDiskSpace) * 100));
   }
 
+  public formatPayout(value: number | null): string {
+    return value === null || value === undefined ? 'Not available' : `$${this.formatNumber(value)}`;
+  }
+
+  public payoutChangeText(node: NodeCard): string {
+    const current = node.currentMonthPayout;
+    const previous = node.previousMonthPayout;
+    if (current === null || current === undefined || !previous) return '';
+    const percent = ((current - previous) / previous) * 100;
+    const sign = percent >= 0 ? '+' : '';
+    return ` (${sign}${percent.toFixed(1)}%)`;
+  }
+
+  public payoutTotal(node: NodeCard): number | null {
+    if (node.currentMonthPayout === null && node.previousMonthPayout === null) return null;
+    return (node.currentMonthPayout ?? 0) + (node.previousMonthPayout ?? 0);
+  }
+
   public loadNodes(): void {
     this.http.get<NodeResponse[]>('/api/job/nodes').subscribe({
       next: (nodes) => {
@@ -520,7 +544,10 @@ export class AppComponent implements OnDestroy {
           availableDiskSpace: node.availableDiskSpace,
           usedDiskSpace: node.usedDiskSpace,
           totalDiskSpace: node.totalDiskSpace,
-          color: node.color ?? '#83a9ff'
+          color: node.color ?? '#83a9ff',
+          currentMonthPayout: node.currentMonthPayout,
+          previousMonthPayout: node.previousMonthPayout,
+          currentMonthExpectations: node.currentMonthExpectations
         }));
         this.lastSync = new Date();
       },

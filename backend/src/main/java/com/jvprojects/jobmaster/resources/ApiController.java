@@ -265,6 +265,10 @@ public class ApiController {
                 ? null
                 : usedDiskSpace + node.getAvailableDiskSpace();
 
+            var estimatedPayout = node.getStorjEstimatedPayout();
+            var currentMonth = estimatedPayout == null ? null : estimatedPayout.getCurrentMonth();
+            var previousMonth = estimatedPayout == null ? null : estimatedPayout.getPreviousMonth();
+
         return new StorjNodeResponse(
                 node.getId(),
                 node.getNodeId(),
@@ -275,7 +279,10 @@ public class ApiController {
                 totalDiskSpace,
                 node.getColor(),
                 node.getCreatedAt(),
-                node.getUpdatedAt()
+                node.getUpdatedAt(),
+                currentMonth == null ? null : currentMonth.getPayout(),
+                previousMonth == null ? null : previousMonth.getPayout(),
+                estimatedPayout == null ? null : estimatedPayout.getCurrentMonthExpectations()
         );
     }
 

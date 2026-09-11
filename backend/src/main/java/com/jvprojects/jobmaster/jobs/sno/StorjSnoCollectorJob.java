@@ -9,6 +9,7 @@ import com.jvprojects.jobmaster.services.sno.StorjSnoMinuteService;
 import com.jvprojects.jobmaster.services.sno.StorjSnoMonthService;
 import com.jvprojects.jobmaster.services.sno.StorjSnoSecondService;
 import com.jvprojects.jobmaster.services.sno.StorjSnoWeekService;
+import com.jvprojects.jobmaster.services.satellites.StorjEstimatedPayoutService;
 import com.jvprojects.jobmaster.services.satellites.StorjSatellitesService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -33,6 +34,7 @@ public class StorjSnoCollectorJob implements Job {
 
     private final StorjSnoSecondService storjSnoSecondService;
     private final StorjSatellitesService storjSatellitesService;
+    private final StorjEstimatedPayoutService storjEstimatedPayoutService;
     private final StorjSnoMinuteService storjSnoMinuteService;
     private final StorjSno5mService storjSno5mService;
     private final StorjSno15mService storjSno15mService;
@@ -44,6 +46,7 @@ public class StorjSnoCollectorJob implements Job {
 
     public StorjSnoCollectorJob(StorjSnoSecondService storjSnoSecondService,
                                  StorjSatellitesService storjSatellitesService,
+                                 StorjEstimatedPayoutService storjEstimatedPayoutService,
                                  StorjSnoMinuteService storjSnoMinuteService,
                                  StorjSno5mService storjSno5mService,
                                  StorjSno15mService storjSno15mService,
@@ -54,6 +57,7 @@ public class StorjSnoCollectorJob implements Job {
                                  StorjSnoMonthService storjSnoMonthService) {
         this.storjSnoSecondService = storjSnoSecondService;
         this.storjSatellitesService = storjSatellitesService;
+        this.storjEstimatedPayoutService = storjEstimatedPayoutService;
         this.storjSnoMinuteService = storjSnoMinuteService;
         this.storjSno5mService = storjSno5mService;
         this.storjSno15mService = storjSno15mService;
@@ -77,6 +81,7 @@ public class StorjSnoCollectorJob implements Job {
             return;
         }
         storjSatellitesService.saveAll(storjSatellitesService.fetchStorjSatellites());
+        storjEstimatedPayoutService.saveAll(storjEstimatedPayoutService.fetchEstimatedPayouts());
         storjSnoMinuteService.runJob();
 
         int minute = now.getMinute();

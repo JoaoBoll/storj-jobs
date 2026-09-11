@@ -109,7 +109,12 @@
 				<div class="node-stats"><div><span>Used disk</span><strong>{{ formatValue(node.usedDiskSpace) }}</strong></div><div><span>Total disk</span><strong>{{ formatValue(node.totalDiskSpace) }}</strong></div></div>
 				<div class="storage-row"><div><span>Available disk space</span><strong>{{ formatValue(node.availableDiskSpace) }}</strong></div><span>{{ diskUsage(node) }}%</span></div>
 				<div class="progress"><span [style.width.%]="diskUsage(node)" [style.background]="node.color"></span></div>
-				<div class="payout-grid"><div><span>Current month</span><strong>Not available</strong></div><div><span>Previous month</span><strong>Not available</strong></div><div><span>Total</span><strong>Not available</strong></div></div>
+				<div class="payout-grid">
+					<div><span>Current month</span><strong>{{ formatPayout(node.currentMonthPayout) }}<small class="payout-change" [class.negative]="payoutChangeText(node).includes('-')">{{ payoutChangeText(node) }}</small></strong></div>
+					<div><span>Previous month</span><strong>{{ formatPayout(node.previousMonthPayout) }}</strong></div>
+					<div><span>Total</span><strong>{{ formatPayout(payoutTotal(node)) }}</strong></div>
+					<div><span>Projected</span><strong>{{ formatPayout(node.currentMonthExpectations) }}</strong></div>
+				</div>
 				<div class="node-link">Registered node <span>DB</span></div>
 			</article>
 		</section>

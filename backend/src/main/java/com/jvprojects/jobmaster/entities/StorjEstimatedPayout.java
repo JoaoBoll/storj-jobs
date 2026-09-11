@@ -15,7 +15,7 @@ public class StorjEstimatedPayout extends BaseEntity {
     @JoinColumn(name = "storj_node_id", nullable = false)
     private StorjNode storjNode;
 
-    @OneToOne(mappedBy = "storjEstimatedPayout")
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "current_month_id", referencedColumnName = "id")
     private MonthData currentMonth;
 

@@ -31,6 +31,15 @@ interface OverviewResponse {
   currentUsedBandwidth: number;
   previousUsedBandwidth: number;
   bandwidthDelta: number;
+  nodes: OverviewNode[];
+}
+
+interface OverviewNode {
+  nodeId: string;
+  usedBandwidth: number | null;
+  usedDiskSpace: number | null;
+  availableDiskSpace: number | null;
+  totalDiskSpace: number | null;
 }
 
 @Component({
@@ -44,10 +53,12 @@ export class AppComponent {
   public activeView = 'Nodes';
   public lastSync = new Date();
   public toastMessage = '';
+  public displayUnit: 'MB' | 'GB' | 'TB' = 'GB';
   public overview: OverviewResponse = {
     currentUsedBandwidth: 0,
     previousUsedBandwidth: 0,
-    bandwidthDelta: 0
+    bandwidthDelta: 0,
+    nodes: []
   };
   public chartOptions: ChartOptions;
 
@@ -65,15 +76,15 @@ export class AppComponent {
   constructor(private readonly http: HttpClient) {
     this.chartOptions = {
       series: [
-        { name: "Used bandwidth", data: [24, 31, 28, 44, 39, 52, 48, 62, 58, 71, 68, 79, 74, 84, 81, 91] },
-        { name: "Storage usage", data: [42, 43, 45, 46, 48, 48, 49, 51, 52, 53, 54, 56, 58, 59, 60, 61] }
+          { name: "Used bandwidth", data: [] },
+          { name: "Storage usage", data: [] }
       ],
       chart: { height: 310, type: "area", toolbar: { show: false }, background: 'transparent' },
       dataLabels: { enabled: false },
       colors: ['#c7f36b', '#5bd6e8'],
       stroke: { curve: "smooth", width: 2 },
       xaxis: {
-        categories: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '00:00', '02:00', '04:00', '06:00'],
+          categories: [],
         labels: { style: { colors: '#6f7b83' } },
         axisBorder: { show: false },
         axisTicks: { show: false }
@@ -92,15 +103,42 @@ export class AppComponent {
     this.http.get<OverviewResponse>('/api/job/overview').subscribe({
       next: (overview) => {
         this.overview = overview;
-        this.chartOptions.series = [
-          { name: 'Bandwidth total', data: [overview.previousUsedBandwidth, overview.currentUsedBandwidth] }
-        ];
-        this.chartOptions.xaxis = { ...this.chartOptions.xaxis, categories: ['Intervalo anterior', 'Intervalo atual'] };
+        this.updateOverviewChart();
       },
       error: () => {
         this.toastMessage = 'Não foi possível carregar o overview';
       }
     });
+  }
+
+  public updateOverviewChart(): void {
+    this.chartOptions.series = [
+      {
+        name: 'Used bandwidth',
+        data: this.overview.nodes.map(node => this.toUnit(node.usedBandwidth))
+      },
+      {
+        name: 'Storage usage',
+        data: this.overview.nodes.map(node => this.toUnit(node.usedDiskSpace))
+      }
+    ];
+    this.chartOptions.xaxis = {
+      ...this.chartOptions.xaxis,
+      categories: this.overview.nodes.map(node => node.nodeId.slice(0, 8))
+    };
+  }
+
+  public toUnit(bytes: number | null): number {
+    if (bytes === null || bytes === undefined) {
+      return 0;
+    }
+    const divisors = { MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 };
+    return Number((bytes / divisors[this.displayUnit]).toFixed(2));
+  }
+
+  public selectUnit(unit: 'MB' | 'GB' | 'TB'): void {
+    this.displayUnit = unit;
+    this.updateOverviewChart();
   }
 
   public loadNodes(): void {
@@ -142,7 +180,14 @@ export class AppComponent {
 
   public formatDelta(bytes: number): string {
     const sign = bytes > 0 ? '+' : '';
-    return `${sign}${this.formatBytes(bytes)}`;
+    return `${sign}${this.formatValue(bytes)}`;
+  }
+
+  public formatValue(bytes: number | null): string {
+    if (bytes === null || bytes === undefined) {
+      return 'Não informado';
+    }
+    return `${this.toUnit(bytes)} ${this.displayUnit}`;
   }
 
   public diskUsage(node: NodeCard): number {

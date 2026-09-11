@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @RestController
@@ -44,7 +45,22 @@ public class JobController {
 
         long current = 0;
         long previous = 0;
+        List<OverviewResponse.NodeOverviewResponse> nodeSummaries = new ArrayList<>();
         for (List<StorjSnoSecond> records : byNode.values()) {
+            StorjSnoSecond latest = records.get(0);
+            Long usedDiskSpace = latest.getUsedDiskSpace();
+                StorjNode registeredNode = storjNodeRepository.findByNodeId(latest.getNodeId());
+                Long availableDiskSpace = registeredNode == null ? null : registeredNode.getAvailableDiskSpace();
+            Long totalDiskSpace = usedDiskSpace == null || availableDiskSpace == null
+                ? null
+                : usedDiskSpace + availableDiskSpace;
+            nodeSummaries.add(new OverviewResponse.NodeOverviewResponse(
+                latest.getNodeId(),
+                latest.getUsedBandwidth(),
+                usedDiskSpace,
+                availableDiskSpace,
+                totalDiskSpace
+            ));
             if (!records.isEmpty() && records.get(0).getUsedBandwidth() != null) {
                 current += records.get(0).getUsedBandwidth();
             }
@@ -52,7 +68,7 @@ public class JobController {
                 previous += records.get(1).getUsedBandwidth();
             }
         }
-        return new OverviewResponse(current, previous, current - previous);
+        return new OverviewResponse(current, previous, current - previous, nodeSummaries);
     }
 
     private StorjNodeResponse toResponse(StorjNode node) {

@@ -45,16 +45,17 @@ public class ApiController {
     }
 
     @GetMapping("/overview")
-    public OverviewResponse overview(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "5m") String interval) {
+    public OverviewResponse overview(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "5m") String interval,
+                                      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "30") int points) {
         Duration step = intervalDuration(interval);
         OffsetDateTime end = OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        OffsetDateTime start = end.minus(step.multipliedBy(30));
+        OffsetDateTime start = end.minus(step.multipliedBy(points));
         List<StorjSnoSecond> snoRecords = storjSnoSecondRepository.findAllByOrderByCreatedAtDesc();
-        List<OverviewResponse.Point> points = new ArrayList<>();
+        List<OverviewResponse.Point> resultPoints = new ArrayList<>();
         Long firstStorage = null;
         Long firstTrash = null;
 
-        for (int index = 0; index < 30; index++) {
+        for (int index = 0; index < points; index++) {
             OffsetDateTime bucketStart = start.plus(step.multipliedBy(index));
             OffsetDateTime bucketEnd = bucketStart.plus(step);
             List<StorjSnoSecond> bucket = snoRecords.stream()
@@ -66,7 +67,7 @@ public class ApiController {
             long trash = latestPerNode(bucket, StorjSnoSecond::getTrashDiskSpace);
             if (firstStorage == null && storage > 0) firstStorage = storage;
             if (firstTrash == null && trash > 0) firstTrash = trash;
-            points.add(new OverviewResponse.Point(
+            resultPoints.add(new OverviewResponse.Point(
                     bucketStart.toString(),
                     storage,
                     percentageOfFirst(storage, firstStorage),
@@ -77,7 +78,7 @@ public class ApiController {
                     uptimeForBucket(bucketStart, bucketEnd)
             ));
         }
-        return new OverviewResponse(interval, 30, points);
+        return new OverviewResponse(interval, points, resultPoints);
     }
 
     private Duration intervalDuration(String interval) {

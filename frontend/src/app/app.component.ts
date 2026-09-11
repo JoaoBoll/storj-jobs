@@ -45,6 +45,9 @@ interface OverviewResponse {
   data: OverviewPoint[];
 }
 
+const RANGE_OPTIONS = [10, 20, 30, 60, 90] as const;
+type Range = typeof RANGE_OPTIONS[number];
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -58,22 +61,16 @@ export class AppComponent {
   public storageUnit: Unit = 'MB';
   public trashUnit: Unit = 'MB';
   public bandwidthUnit: Unit = 'MB';
+  public readonly rangeOptions = RANGE_OPTIONS;
   public storageInterval: Interval = '5m';
   public trashInterval: Interval = '5m';
   public bandwidthInterval: Interval = '5m';
   public uptimeInterval: Interval = '5m';
-  public overviewData: { [key in Interval]: OverviewResponse } = {
-    '5s': { interval: '5s', points: 30, data: [] },
-    '15s': { interval: '15s', points: 30, data: [] },
-    '30s': { interval: '30s', points: 30, data: [] },
-    '5m': { interval: '5m', points: 30, data: [] },
-    '15m': { interval: '15m', points: 30, data: [] },
-    '30m': { interval: '30m', points: 30, data: [] },
-    '1h': { interval: '1h', points: 30, data: [] },
-    '1d': { interval: '1d', points: 30, data: [] },
-    '1w': { interval: '1w', points: 30, data: [] },
-    '1mo': { interval: '1mo', points: 30, data: [] }
-  };
+  public storageRange: Range = 30;
+  public trashRange: Range = 30;
+  public bandwidthRange: Range = 30;
+  public uptimeRange: Range = 30;
+  private readonly overviewData = new Map<string, OverviewResponse>();
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
   public bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
@@ -90,27 +87,35 @@ export class AppComponent {
     { label: 'SNO month', cadence: 'Monthly', state: 'Scheduled' }
   ];
 
-  private readonly loadedIntervals = new Set<Interval>();
-
   constructor(private readonly http: HttpClient) {
     this.loadNodes();
     this.loadOverview();
   }
 
   public loadOverview(force = false): void {
-    const activeIntervals = new Set<Interval>([this.storageInterval, this.trashInterval, this.bandwidthInterval, this.uptimeInterval]);
-    activeIntervals.forEach(interval => this.fetchInterval(interval, force));
+    const combos = new Map<string, { interval: Interval; range: Range }>();
+    [
+      { interval: this.storageInterval, range: this.storageRange },
+      { interval: this.trashInterval, range: this.trashRange },
+      { interval: this.bandwidthInterval, range: this.bandwidthRange },
+      { interval: this.uptimeInterval, range: this.uptimeRange }
+    ].forEach(combo => combos.set(this.overviewKey(combo.interval, combo.range), combo));
+    combos.forEach(combo => this.fetchOverview(combo.interval, combo.range, force));
   }
 
-  private fetchInterval(interval: Interval, force = false): void {
-    if (this.loadedIntervals.has(interval) && !force) {
+  private overviewKey(interval: Interval, range: Range): string {
+    return `${interval}:${range}`;
+  }
+
+  private fetchOverview(interval: Interval, range: Range, force = false): void {
+    const key = this.overviewKey(interval, range);
+    if (this.overviewData.has(key) && !force) {
       this.updateOverviewCharts();
       return;
     }
-    this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}`).subscribe({
+    this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}&points=${range}`).subscribe({
       next: (overview) => {
-        this.overviewData[interval] = overview;
-        this.loadedIntervals.add(interval);
+        this.overviewData.set(key, overview);
         this.updateOverviewCharts();
         this.lastSync = new Date();
       },
@@ -123,7 +128,29 @@ export class AppComponent {
     if (chart === 'trash') this.trashInterval = interval;
     if (chart === 'bandwidth') this.bandwidthInterval = interval;
     if (chart === 'uptime') this.uptimeInterval = interval;
-    this.fetchInterval(interval);
+    this.fetchOverview(interval, this.rangeFor(chart));
+  }
+
+  public selectChartRange(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime', range: Range): void {
+    if (chart === 'storage') this.storageRange = range;
+    if (chart === 'trash') this.trashRange = range;
+    if (chart === 'bandwidth') this.bandwidthRange = range;
+    if (chart === 'uptime') this.uptimeRange = range;
+    this.fetchOverview(this.intervalFor(chart), range);
+  }
+
+  private intervalFor(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): Interval {
+    if (chart === 'storage') return this.storageInterval;
+    if (chart === 'trash') return this.trashInterval;
+    if (chart === 'bandwidth') return this.bandwidthInterval;
+    return this.uptimeInterval;
+  }
+
+  private rangeFor(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): Range {
+    if (chart === 'storage') return this.storageRange;
+    if (chart === 'trash') return this.trashRange;
+    if (chart === 'bandwidth') return this.bandwidthRange;
+    return this.uptimeRange;
   }
 
   public selectUnit(chart: 'storage' | 'trash' | 'bandwidth', unit: Unit): void {
@@ -133,25 +160,44 @@ export class AppComponent {
     this.updateOverviewCharts();
   }
 
+  private overviewFor(interval: Interval, range: Range): OverviewResponse {
+    return this.overviewData.get(this.overviewKey(interval, range)) ?? { interval, points: range, data: [] };
+  }
+
+  public get storageOverview(): OverviewResponse {
+    return this.overviewFor(this.storageInterval, this.storageRange);
+  }
+
+  public get uptimeOverview(): OverviewResponse {
+    return this.overviewFor(this.uptimeInterval, this.uptimeRange);
+  }
+
   public updateOverviewCharts(): void {
-    const storageData = this.overviewData[this.storageInterval];
-    const trashData = this.overviewData[this.trashInterval];
-    const bandwidthData = this.overviewData[this.bandwidthInterval];
-    const uptimeData = this.overviewData[this.uptimeInterval];
+    const storageData = this.overviewFor(this.storageInterval, this.storageRange);
+    const trashData = this.overviewFor(this.trashInterval, this.trashRange);
+    const bandwidthData = this.overviewFor(this.bandwidthInterval, this.bandwidthRange);
+    const uptimeData = this.overviewFor(this.uptimeInterval, this.uptimeRange);
 
     const storageLabels = storageData.data.map(point => this.formatLabel(point.label, this.storageInterval));
     const trashLabels = trashData.data.map(point => this.formatLabel(point.label, this.trashInterval));
     const bandwidthLabels = bandwidthData.data.map(point => this.formatLabel(point.label, this.bandwidthInterval));
     const uptimeLabels = uptimeData.data.map(point => this.formatLabel(point.label, this.uptimeInterval));
 
-    this.storageChart = { ...this.storageChart, series: [
-      { name: `Storage used (${this.storageUnit})`, data: storageData.data.map(point => this.toUnit(point.storageUsed, this.storageUnit)) },
-      { name: '% of first', data: storageData.data.map(point => point.storagePercentOfFirst) }
-    ], xaxis: { ...this.storageChart.xaxis, categories: storageLabels } };
-    this.trashChart = { ...this.trashChart, series: [
-      { name: `Trash (${this.trashUnit})`, data: trashData.data.map(point => this.toUnit(point.trashUsed, this.trashUnit)) },
-      { name: '% of first', data: trashData.data.map(point => point.trashPercentOfFirst) }
-    ], xaxis: { ...this.trashChart.xaxis, categories: trashLabels } };
+    const storageValues = storageData.data.map(point => this.toUnit(point.storageUsed, this.storageUnit));
+    const trashValues = trashData.data.map(point => this.toUnit(point.trashUsed, this.trashUnit));
+
+    this.storageChart = {
+      ...this.storageChart,
+      series: [{ name: `Storage used (${this.storageUnit})`, data: storageValues }],
+      xaxis: { ...this.storageChart.xaxis, categories: storageLabels },
+      tooltip: this.buildDeltaTooltip(this.storageUnit, storageValues)
+    };
+    this.trashChart = {
+      ...this.trashChart,
+      series: [{ name: `Trash (${this.trashUnit})`, data: trashValues }],
+      xaxis: { ...this.trashChart.xaxis, categories: trashLabels },
+      tooltip: this.buildDeltaTooltip(this.trashUnit, trashValues)
+    };
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
@@ -163,14 +209,43 @@ export class AppComponent {
     this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', uptimeData.data.map(point => point.uptimePercent), uptimeLabels);
   }
 
+  private percentChange(values: number[], index: number): number {
+    if (index === 0) return 0;
+    const previous = values[index - 1];
+    if (!previous) return 0;
+    return ((values[index] - previous) / previous) * 100;
+  }
+
+  private buildDeltaTooltip(unit: string, values: number[]): ChartOptions['tooltip'] {
+    return {
+      theme: 'dark',
+      custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
+        const value = this.formatNumber(values[dataPointIndex] ?? 0);
+        const change = this.percentChange(values, dataPointIndex);
+        const sign = change >= 0 ? '+' : '';
+        const color = change >= 0 ? '#c7f36b' : '#f4bb61';
+        return `<div style="padding:8px 10px;font:11px 'DM Mono',monospace;color:#e7ecee;background:#141b1f;border:1px solid #26323a;border-radius:6px;">`
+          + `<div>${value} ${unit}</div>`
+          + `<div style="color:${color};margin-top:4px;">${sign}${change.toFixed(2)}% vs previous point</div>`
+          + `</div>`;
+      }
+    };
+  }
+
   public createChart(color: string, name: string): ChartOptions {
     return {
       series: [{ name, data: [] }],
       chart: { height: 260, type: 'line', toolbar: { show: false }, background: 'transparent' },
       dataLabels: { enabled: false }, colors: [color], stroke: { curve: 'smooth', width: 2 },
       xaxis: { categories: [], labels: { style: { colors: '#6f7b83' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-      yaxis: { labels: { style: { colors: '#6f7b83' } } }, grid: { borderColor: '#26323a', strokeDashArray: 4 }, legend: { show: true, labels: { colors: '#849197' } }, tooltip: { theme: 'dark' }
+      yaxis: { labels: { style: { colors: '#6f7b83' }, formatter: (value: number) => this.formatNumber(value) } },
+      grid: { borderColor: '#26323a', strokeDashArray: 4 }, legend: { show: true, labels: { colors: '#849197' } },
+      tooltip: { theme: 'dark', y: { formatter: (value: number) => this.formatNumber(value) } }
     };
+  }
+
+  private formatNumber(value: number): string {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
   public withData(chart: ChartOptions, name: string, data: number[], labels: string[]): ChartOptions {

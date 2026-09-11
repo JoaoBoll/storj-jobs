@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { ChartOptions } from '../../../models/chart-options.model';
 
 @Component({
   selector: 'app-spline-area-chart',
@@ -8,10 +9,5 @@ import { NgApexchartsModule } from 'ng-apexcharts';
 })
 export class SplineAreaChartComponent {
 
-  //@ts-ignore
-  @Input chartOptions: ChartOptions = '';
-
-  constructor() {
-
-  }
+  @Input() chartOptions!: ChartOptions;
 }

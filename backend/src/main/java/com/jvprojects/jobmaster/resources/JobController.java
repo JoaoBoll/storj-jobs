@@ -2,11 +2,13 @@ package com.jvprojects.jobmaster.resources;
 
 import com.jvprojects.jobmaster.services.sno.*;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/job")
+@CrossOrigin(origins = "*")
 public class JobController {
 
     private final StorjSnoSecondService storjSnoSecondService;

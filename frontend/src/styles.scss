@@ -1,1 +1,20 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+	--ink: #e8eef0;
+	--muted: #849197;
+	--muted-dark: #59666d;
+	--line: #253139;
+	--panel: #11191e;
+	--panel-soft: #151f25;
+	--canvas: #0b1115;
+	--lime: #c7f36b;
+	--cyan: #5bd6e8;
+	--blue: #83a9ff;
+	--amber: #f4bb61;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--canvas); color: var(--ink); font-family: 'Manrope', sans-serif; }
+body { overflow-x: hidden; }
+button { font: inherit; }

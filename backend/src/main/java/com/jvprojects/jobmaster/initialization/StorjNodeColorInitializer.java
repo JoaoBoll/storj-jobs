@@ -19,13 +19,20 @@ public class StorjNodeColorInitializer implements ApplicationRunner {
     private final StorjNodeRepository storjNodeRepository;
     private final Random random = new Random();
 
-    // Palette of distinct colors for nodes
-    private static final String[] COLOR_PALETTE = {
-        "#83a9ff", "#c7f36b", "#f4bb61", "#5bd6e8",
-        "#ff6b6b", "#4ecdc4", "#45b7d1", "#f7b731",
-        "#5f27cd", "#00d2d3", "#ff9ff3", "#54a0ff",
-        "#48dbfb", "#1dd1a1", "#ff6348", "#a55eea"
-    };
+    private static String generateColor() {
+        Random random = new Random();
+
+        float hue = random.nextFloat() * 360f;
+        float saturation = 0.55f + random.nextFloat() * 0.35f;
+        float lightness = 0.60f + random.nextFloat() * 0.20f;
+
+        return String.format(
+            "#%02x%02x%02x",
+            Color.HSBtoRGB(hue / 360f, saturation, lightness) >> 16 & 0xff,
+            Color.HSBtoRGB(hue / 360f, saturation, lightness) >> 8 & 0xff,
+            Color.HSBtoRGB(hue / 360f, saturation, lightness) & 0xff
+        );
+    }
 
     public StorjNodeColorInitializer(StorjNodeRepository storjNodeRepository) {
         this.storjNodeRepository = storjNodeRepository;
@@ -46,7 +53,7 @@ public class StorjNodeColorInitializer implements ApplicationRunner {
         log.info("🎨 Assigning colors to {} nodes without color...", nodesWithoutColor.size());
 
         nodesWithoutColor.forEach(node -> {
-            String color = COLOR_PALETTE[random.nextInt(COLOR_PALETTE.length)];
+            String color = generateColor();
             node.setColor(color);
             storjNodeRepository.save(node);
             log.info("  → Node {} assigned color {}", node.getNodeId(), color);

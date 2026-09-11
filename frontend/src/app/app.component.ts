@@ -387,14 +387,16 @@ export class AppComponent implements OnDestroy {
 
   private updatePayoutChart(): void {
     const data = this.overviewFor(this.payoutInterval, this.payoutRange);
+    // estimatedPayout is carried straight from the estimated-payout API, which reports
+    // cents - convert to dollars here, for display only.
     const rawValues = data.data.map(point => point.estimatedPayout ?? 0);
     const unit = 'USD';
-    const values = rawValues.map(val => typeof val === 'number' ? val : parseFloat(String(val)));
+    const values = rawValues.map(val => (typeof val === 'number' ? val : parseFloat(String(val))) / 100);
     const displayValues = values.slice(-this.payoutRange);
     const displayLabels = data.data.slice(-this.payoutRange).map(point => this.formatLabel(point.label, this.payoutInterval));
     this.payoutChart = this.withData(this.payoutChart, 'Estimated Payout', displayValues, displayLabels);
     const latest = displayValues.length ? displayValues[displayValues.length - 1] : 0;
-    this.payoutSummary = `$${this.formatNumber(latest)}`;
+    this.payoutSummary = `US$ ${latest.toFixed(2)}`;
     this.payoutDeltaText = this.formatDelta(displayValues, unit);
   }
 
@@ -515,8 +517,10 @@ export class AppComponent implements OnDestroy {
     return Math.min(100, Math.round((node.usedDiskSpace / node.totalDiskSpace) * 100));
   }
 
-  public formatPayout(value: number | null): string {
-    return value === null || value === undefined ? 'Not available' : `$${this.formatNumber(value)}`;
+  // The estimated-payout API reports payout/expectation figures in cents; convert to
+  // dollars here, for display only - stored/summed values stay in cents.
+  public formatPayout(cents: number | null): string {
+    return cents === null || cents === undefined ? 'Not available' : `US$ ${(cents / 100).toFixed(2)}`;
   }
 
   public payoutChangeText(node: NodeCard): string {

@@ -5,7 +5,7 @@ import { SplineAreaChartComponent } from './shared/charts/spline-area-chart/spli
 import { ChartOptions } from './models/chart-options.model';
 
 type Unit = 'MB' | 'GB' | 'TB';
-type Interval = '5m' | '15m' | '30m' | '1h';
+type Interval = '5m' | '15m' | '30m' | '1h' | '1d' | '1w' | '1mo';
 
 interface NodeResponse {
   id: string;
@@ -52,14 +52,25 @@ interface OverviewResponse {
   imports: [CommonModule, SplineAreaChartComponent]
 })
 export class AppComponent {
-  public activeView = 'Nodes';
+  public activeView = 'Overview';
   public lastSync = new Date();
   public toastMessage = '';
-  public storageUnit: Unit = 'GB';
-  public trashUnit: Unit = 'GB';
-  public bandwidthUnit: Unit = 'GB';
-  public interval: Interval = '5m';
-  public overview: OverviewResponse = { interval: '5m', points: 30, data: [] };
+  public storageUnit: Unit = 'MB';
+  public trashUnit: Unit = 'MB';
+  public bandwidthUnit: Unit = 'MB';
+  public storageInterval: Interval = '5m';
+  public trashInterval: Interval = '5m';
+  public bandwidthInterval: Interval = '5m';
+  public uptimeInterval: Interval = '5m';
+  public overviewData: { [key in Interval]: OverviewResponse } = {
+    '5m': { interval: '5m', points: 30, data: [] },
+    '15m': { interval: '15m', points: 30, data: [] },
+    '30m': { interval: '30m', points: 30, data: [] },
+    '1h': { interval: '1h', points: 30, data: [] },
+    '1d': { interval: '1d', points: 30, data: [] },
+    '1w': { interval: '1w', points: 30, data: [] },
+    '1mo': { interval: '1mo', points: 30, data: [] }
+  };
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
   public bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
@@ -67,8 +78,9 @@ export class AppComponent {
   public nodes: NodeCard[] = [];
 
   public readonly jobs = [
-    { label: 'SNO second', cadence: 'Every 5 seconds', state: 'Scheduled' },
-    { label: 'SNO minute', cadence: 'Every minute', state: 'Scheduled' },
+    { label: 'SNO 5m', cadence: 'Every 5 minutes', state: 'Scheduled' },
+    { label: 'SNO 15m', cadence: 'Every 15 minutes', state: 'Scheduled' },
+    { label: 'SNO 30m', cadence: 'Every 30 minutes', state: 'Scheduled' },
     { label: 'SNO hour', cadence: 'Hourly', state: 'Scheduled' },
     { label: 'SNO day', cadence: 'Daily', state: 'Scheduled' },
     { label: 'SNO week', cadence: 'Weekly', state: 'Scheduled' },
@@ -81,47 +93,62 @@ export class AppComponent {
   }
 
   public loadOverview(): void {
-    this.http.get<OverviewResponse>(`/api/job/overview?interval=${this.interval}`).subscribe({
-      next: (overview) => {
-        this.overview = overview;
-        this.updateOverviewCharts();
-        this.lastSync = new Date();
-      },
-      error: () => this.toastMessage = 'Não foi possível carregar o overview'
+    const intervals: Interval[] = ['5m', '15m', '30m', '1h', '1d', '1w', '1mo'];
+    intervals.forEach(interval => {
+      this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}`).subscribe({
+        next: (overview) => {
+          this.overviewData[interval] = overview;
+          this.updateOverviewCharts();
+          this.lastSync = new Date();
+        },
+        error: () => this.toastMessage = 'Failed to load overview'
+      });
     });
   }
 
-  public selectInterval(interval: Interval): void {
-    this.interval = interval;
-    this.loadOverview();
+  public selectChartInterval(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime', interval: Interval): void {
+    if (chart === 'storage') this.storageInterval = interval;
+    if (chart === 'trash') this.trashInterval = interval;
+    if (chart === 'bandwidth') this.bandwidthInterval = interval;
+    if (chart === 'uptime') this.uptimeInterval = interval;
+    this.updateOverviewCharts();
   }
 
   public selectUnit(chart: 'storage' | 'trash' | 'bandwidth', unit: Unit): void {
     if (chart === 'storage') this.storageUnit = unit;
-    if (chart === 'trash') this.trashUnit = unit;
-    if (chart === 'bandwidth') this.bandwidthUnit = unit;
+    else if (chart === 'trash') this.trashUnit = unit;
+    else if (chart === 'bandwidth') this.bandwidthUnit = unit;
     this.updateOverviewCharts();
   }
 
   public updateOverviewCharts(): void {
-    const labels = this.overview.data.map(point => this.formatLabel(point.label));
+    const storageData = this.overviewData[this.storageInterval];
+    const trashData = this.overviewData[this.trashInterval];
+    const bandwidthData = this.overviewData[this.bandwidthInterval];
+    const uptimeData = this.overviewData[this.uptimeInterval];
+
+    const storageLabels = storageData.data.map(point => this.formatLabel(point.label));
+    const trashLabels = trashData.data.map(point => this.formatLabel(point.label));
+    const bandwidthLabels = bandwidthData.data.map(point => this.formatLabel(point.label));
+    const uptimeLabels = uptimeData.data.map(point => this.formatLabel(point.label));
+
     this.storageChart = { ...this.storageChart, series: [
-      { name: `Storage used (${this.storageUnit})`, data: this.overview.data.map(point => this.toUnit(point.storageUsed, this.storageUnit)) },
-      { name: '% of first', data: this.overview.data.map(point => point.storagePercentOfFirst) }
-    ], xaxis: { ...this.storageChart.xaxis, categories: labels } };
+      { name: `Storage used (${this.storageUnit})`, data: storageData.data.map(point => this.toUnit(point.storageUsed, this.storageUnit)) },
+      { name: '% of first', data: storageData.data.map(point => point.storagePercentOfFirst) }
+    ], xaxis: { ...this.storageChart.xaxis, categories: storageLabels } };
     this.trashChart = { ...this.trashChart, series: [
-      { name: `Trash (${this.trashUnit})`, data: this.overview.data.map(point => this.toUnit(point.trashUsed, this.trashUnit)) },
-      { name: '% of first', data: this.overview.data.map(point => point.trashPercentOfFirst) }
-    ], xaxis: { ...this.trashChart.xaxis, categories: labels } };
+      { name: `Trash (${this.trashUnit})`, data: trashData.data.map(point => this.toUnit(point.trashUsed, this.trashUnit)) },
+      { name: '% of first', data: trashData.data.map(point => point.trashPercentOfFirst) }
+    ], xaxis: { ...this.trashChart.xaxis, categories: trashLabels } };
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
-        { name: 'Ingress', data: this.overview.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit)) },
-        { name: 'Egress', data: this.overview.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit)) }
+        { name: 'Ingress', data: bandwidthData.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit)) },
+        { name: 'Egress', data: bandwidthData.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit)) }
       ],
-      xaxis: { ...this.bandwidthChart.xaxis, categories: labels }
+      xaxis: { ...this.bandwidthChart.xaxis, categories: bandwidthLabels }
     };
-    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', this.overview.data.map(point => point.uptimePercent), labels);
+    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', uptimeData.data.map(point => point.uptimePercent), uptimeLabels);
   }
 
   public createChart(color: string, name: string): ChartOptions {
@@ -150,7 +177,7 @@ export class AppComponent {
   }
 
   public formatValue(bytes: number | null): string {
-    return bytes === null || bytes === undefined ? 'Não informado' : `${this.toUnit(bytes, 'GB')} GB`;
+    return bytes === null || bytes === undefined ? 'Not available' : `${this.toUnit(bytes, 'MB')} MB`;
   }
 
   public diskUsage(node: NodeCard): number {
@@ -173,7 +200,7 @@ export class AppComponent {
         }));
         this.lastSync = new Date();
       },
-      error: () => this.toastMessage = 'Não foi possível carregar os nodes registrados'
+      error: () => this.toastMessage = 'Failed to load registered nodes'
     });
   }
 

@@ -20,7 +20,10 @@ public class StorjSnoTimes extends StorjSno {
     @Column(name = "egress_total")
     private Long egressTotal;
 
-    @Column(name = "uptime_average")
-    private Double uptimeAverage;
+    @Column(name = "uptime_score_sum")
+    private Double uptimeScoreSum;
+
+    @Column(name = "uptime_score_count")
+    private Integer uptimeScoreCount;
 
 }

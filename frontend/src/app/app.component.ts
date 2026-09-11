@@ -67,7 +67,7 @@ export class AppComponent implements OnDestroy {
   public storageInterval: Interval = '5m';
   public trashInterval: Interval = '5m';
   public bandwidthInterval: Interval = '5m';
-  public uptimeInterval: Interval = '5m';
+  public uptimeInterval: Interval = '30m';
   public storageRange: Range = 30;
   public trashRange: Range = 30;
   public bandwidthRange: Range = 30;
@@ -243,23 +243,29 @@ export class AppComponent implements OnDestroy {
     const unit = this.resolveUnit(this.bandwidthUnit, Math.max(this.representativeBytes(rawIngress), this.representativeBytes(rawEgress)));
     const ingressValues = rawIngress.map(bytes => this.toUnit(bytes, unit));
     const egressValues = rawEgress.map(bytes => this.toUnit(bytes, unit));
+    const ingressDeltas = this.toDeltaSeries(ingressValues);
+    const egressDeltas = this.toDeltaSeries(egressValues);
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
-        { name: 'Ingress', data: ingressValues },
-        { name: 'Egress', data: egressValues }
+        { name: 'Ingress', data: ingressDeltas },
+        { name: 'Egress', data: egressDeltas }
       ],
       xaxis: { ...this.bandwidthChart.xaxis, categories: labels },
-      tooltip: this.buildPreviousDeltaTooltip(unit, [
-        { name: 'Ingress', values: ingressValues },
-        { name: 'Egress', values: egressValues }
+      tooltip: this.buildSignedTooltip(unit, [
+        { name: 'Ingress', values: ingressDeltas },
+        { name: 'Egress', values: egressDeltas }
       ])
     };
-    const totalIngress = this.formatNumber(ingressValues.reduce((sum, value) => sum + value, 0));
-    const totalEgress = this.formatNumber(egressValues.reduce((sum, value) => sum + value, 0));
+    const totalIngress = this.formatNumber(ingressValues.length ? ingressValues[ingressValues.length - 1] : 0);
+    const totalEgress = this.formatNumber(egressValues.length ? egressValues[egressValues.length - 1] : 0);
     this.bandwidthSummary = `Total Ingress: ${totalIngress} ${unit} · Total Egress: ${totalEgress} ${unit}`;
     this.bandwidthIngressTotal = `${totalIngress} ${unit}`;
     this.bandwidthEgressTotal = `${totalEgress} ${unit}`;
+  }
+
+  private toDeltaSeries(values: number[]): number[] {
+    return values.map((value, index) => index === 0 ? value : value - values[index - 1]);
   }
 
   private updateUptimeChart(): void {
@@ -297,20 +303,15 @@ export class AppComponent implements OnDestroy {
     };
   }
 
-  private buildPreviousDeltaTooltip(unit: string, series: { name: string; values: number[] }[]): ChartOptions['tooltip'] {
+  private buildSignedTooltip(unit: string, series: { name: string; values: number[] }[]): ChartOptions['tooltip'] {
     return {
       theme: 'dark',
       custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
         const rows = series.map(({ name, values }) => {
-          const value = this.formatNumber(values[dataPointIndex] ?? 0);
-          const hasReference = dataPointIndex > 0 && !!values[dataPointIndex - 1];
-          const deltaLine = !hasReference ? '' : (() => {
-            const delta = values[dataPointIndex] - values[dataPointIndex - 1];
-            const sign = delta >= 0 ? '+' : '';
-            const color = delta >= 0 ? '#c7f36b' : '#f4bb61';
-            return ` <span style="color:${color};">(${sign}${this.formatNumber(delta)} vs previous point)</span>`;
-          })();
-          return `<div style="margin-top:6px;"><strong>${name}:</strong> ${value} ${unit}${deltaLine}</div>`;
+          const delta = values[dataPointIndex] ?? 0;
+          const sign = delta >= 0 ? '+' : '';
+          const color = delta >= 0 ? '#c7f36b' : '#f4bb61';
+          return `<div style="margin-top:6px;"><strong>${name}:</strong> <span style="color:${color};">${sign}${this.formatNumber(delta)} ${unit}</span></div>`;
         }).join('');
         return `<div style="padding:8px 10px;font:11px 'DM Mono',monospace;color:#e7ecee;background:#141b1f;border:1px solid #26323a;border-radius:6px;">${rows}</div>`;
       }

@@ -153,7 +153,8 @@ public class StorjSnoSecondService {
         List<BigDecimal> scores = satellites.getAudits() == null
                 ? List.of()
                 : satellites.getAudits().stream().map(com.jvprojects.jobmaster.entities.Audits::getOnlineScore).filter(Objects::nonNull).toList();
-        second.setUptimeAverage(scores.isEmpty() ? 100 : scores.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(1) * 100);
+        second.setUptimeScoreSum(scores.stream().mapToDouble(BigDecimal::doubleValue).sum() * 100);
+        second.setUptimeScoreCount(scores.size());
     }
 
     private long value(Long value) {

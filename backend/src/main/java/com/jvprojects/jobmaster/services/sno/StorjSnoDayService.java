@@ -68,7 +68,8 @@ public class StorjSnoDayService {
                 day.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
                 day.setIngressTotal(last.getIngressTotal());
                 day.setEgressTotal(last.getEgressTotal());
-                day.setUptimeAverage(last.getUptimeAverage());
+                day.setUptimeScoreSum(last.getUptimeScoreSum());
+                day.setUptimeScoreCount(last.getUptimeScoreCount());
 
                 storjSnoDayRepository.save(day);
             }

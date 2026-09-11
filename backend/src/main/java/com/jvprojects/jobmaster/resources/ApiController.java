@@ -18,7 +18,6 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
-import java.util.function.ToDoubleFunction;
 
 @RestController
 @RequestMapping("/api/job")
@@ -64,7 +63,7 @@ public class ApiController {
             long trash = sumOf(latest, StorjSnoSecond::getTrashDiskSpace);
             long ingress = sumOf(latest, StorjSnoSecond::getIngressTotal);
             long egress = sumOf(latest, StorjSnoSecond::getEgressTotal);
-            double uptime = averageOf(latest, record -> record.getUptimeAverage() == null ? 100 : record.getUptimeAverage());
+            double uptime = weightedUptimeAverage(latest);
             if (firstStorage == null && storage > 0) firstStorage = storage;
             if (firstTrash == null && trash > 0) firstTrash = trash;
             resultPoints.add(new OverviewResponse.Point(
@@ -127,8 +126,15 @@ public class ApiController {
         return records.stream().mapToLong(record -> value.apply(record) == null ? 0 : value.apply(record)).sum();
     }
 
-    private double averageOf(Collection<StorjSnoSecond> records, ToDoubleFunction<StorjSnoSecond> value) {
-        return records.isEmpty() ? 100 : records.stream().mapToDouble(value).average().orElse(100);
+    /**
+     * A true average across every satellite of every node, not an average of each node's own
+     * average - nodes don't all have the same number of satellites, so averaging per-node
+     * averages would over-weight nodes with fewer satellites.
+     */
+    private double weightedUptimeAverage(Collection<StorjSnoSecond> records) {
+        double sum = records.stream().mapToDouble(record -> record.getUptimeScoreSum() == null ? 0 : record.getUptimeScoreSum()).sum();
+        int count = records.stream().mapToInt(record -> record.getUptimeScoreCount() == null ? 0 : record.getUptimeScoreCount()).sum();
+        return count == 0 ? 100 : sum / count;
     }
 
     private double percentageOfFirst(long current, Long first) {

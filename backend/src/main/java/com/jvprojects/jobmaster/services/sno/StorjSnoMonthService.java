@@ -69,7 +69,8 @@ public class StorjSnoMonthService {
                 month.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
                 month.setIngressTotal(last.getIngressTotal());
                 month.setEgressTotal(last.getEgressTotal());
-                month.setUptimeAverage(last.getUptimeAverage());
+                month.setUptimeScoreSum(last.getUptimeScoreSum());
+                month.setUptimeScoreCount(last.getUptimeScoreCount());
 
                 storjSnoMonthRepository.save(month);
             }

@@ -72,7 +72,8 @@ public class StorjSnoMinuteService {
                 minute.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
                 minute.setIngressTotal(last.getIngressTotal());
                 minute.setEgressTotal(last.getEgressTotal());
-                minute.setUptimeAverage(last.getUptimeAverage());
+                minute.setUptimeScoreSum(last.getUptimeScoreSum());
+                minute.setUptimeScoreCount(last.getUptimeScoreCount());
 
                 storjSnoMinuteRepository.save(minute);
             }

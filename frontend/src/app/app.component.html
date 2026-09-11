@@ -60,17 +60,17 @@
 			</article>
 			<article class="metric-card accent-cyan">
 				<div class="metric-heading"><span>Storage usage</span><span class="metric-symbol">#</span></div>
-				<strong>{{ overview.points }} <small>points</small></strong>
-				<div class="metric-foot"><span class="positive">{{ interval }}</span><span>selected interval</span></div>
+				<strong>{{ overviewData[storageInterval].points }} <small>points</small></strong>
+				<div class="metric-foot"><span class="positive">{{ storageInterval }}</span><span>selected interval</span></div>
 			</article>
 			<article class="metric-card accent-blue">
 				<div class="metric-heading"><span>Uptime average</span><span class="metric-symbol">%</span></div>
-				<strong>{{ overview.data.length ? (overview.data[overview.data.length - 1].uptimePercent | number:'1.2-2') : 0 }}<small>%</small></strong>
+				<strong>{{ overviewData[uptimeInterval].data.length ? (overviewData[uptimeInterval].data[overviewData[uptimeInterval].data.length - 1].uptimePercent | number:'1.2-2') : 0 }}<small>%</small></strong>
 				<div class="metric-foot"><span class="positive">All satellites</span><span>per node</span></div>
 			</article>
 			<article class="metric-card accent-amber">
 				<div class="metric-heading"><span>Capacity</span><span class="metric-symbol">#</span></div>
-				<strong>{{ overview.data.length ? (overview.data[overview.data.length - 1].storagePercentOfFirst | number:'1.1-1') : 0 }}<small>%</small></strong>
+				<strong>{{ overviewData[storageInterval].data.length ? (overviewData[storageInterval].data[overviewData[storageInterval].data.length - 1].storagePercentOfFirst | number:'1.1-1') : 0 }}<small>%</small></strong>
 				<div class="metric-foot"><span class="positive">vs first point</span><span>storage change</span></div>
 			</article>
 		</section>

@@ -64,13 +64,15 @@ export class AppComponent {
   public readonly rangeOptions = RANGE_OPTIONS;
   public storageInterval: Interval = '5m';
   public trashInterval: Interval = '5m';
-  public bandwidthInterval: Interval = '5m';
+  public bandwidthInterval: Interval = '1d';
   public uptimeInterval: Interval = '5m';
   public storageRange: Range = 30;
   public trashRange: Range = 30;
   public bandwidthRange: Range = 30;
   public uptimeRange: Range = 30;
   private readonly overviewData = new Map<string, OverviewResponse>();
+  public bandwidthSummary = '';
+  public uptimeSummary = '';
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
   public bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
@@ -215,12 +217,18 @@ export class AppComponent {
         { name: 'Egress', values: egressValues }
       ])
     };
+    const totalIngress = this.formatNumber(ingressValues.reduce((sum, value) => sum + value, 0));
+    const totalEgress = this.formatNumber(egressValues.reduce((sum, value) => sum + value, 0));
+    this.bandwidthSummary = `Total Ingress: ${totalIngress} ${this.bandwidthUnit} · Total Egress: ${totalEgress} ${this.bandwidthUnit}`;
   }
 
   private updateUptimeChart(): void {
     const data = this.overviewFor(this.uptimeInterval, this.uptimeRange);
     const labels = data.data.map(point => this.formatLabel(point.label, this.uptimeInterval));
-    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', data.data.map(point => point.uptimePercent), labels);
+    const values = data.data.map(point => point.uptimePercent);
+    this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', values, labels);
+    const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    this.uptimeSummary = `Average: ${average.toFixed(2)}%`;
   }
 
   private percentChange(values: number[], index: number): number {
@@ -234,7 +242,8 @@ export class AppComponent {
       theme: 'dark',
       custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
         const value = this.formatNumber(values[dataPointIndex] ?? 0);
-        const percentLine = dataPointIndex === 0 ? '' : (() => {
+        const hasReference = dataPointIndex > 0 && !!values[0];
+        const percentLine = !hasReference ? '' : (() => {
           const change = this.percentChange(values, dataPointIndex);
           const sign = change >= 0 ? '+' : '';
           const color = change >= 0 ? '#c7f36b' : '#f4bb61';
@@ -254,7 +263,8 @@ export class AppComponent {
       custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
         const rows = series.map(({ name, values }) => {
           const value = this.formatNumber(values[dataPointIndex] ?? 0);
-          const deltaLine = dataPointIndex === 0 ? '' : (() => {
+          const hasReference = dataPointIndex > 0 && !!values[dataPointIndex - 1];
+          const deltaLine = !hasReference ? '' : (() => {
             const delta = values[dataPointIndex] - values[dataPointIndex - 1];
             const sign = delta >= 0 ? '+' : '';
             const color = delta >= 0 ? '#c7f36b' : '#f4bb61';

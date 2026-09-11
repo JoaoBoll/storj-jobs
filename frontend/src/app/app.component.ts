@@ -262,7 +262,9 @@ export class AppComponent implements OnDestroy {
       ...this.storageChart,
       series: [{ name: `Storage used (${unit})`, data: displayValues }],
       xaxis: { ...this.storageChart.xaxis, categories: displayLabels },
-      tooltip: this.buildDeltaTooltip(unit, displayValues)
+      // Storage only grows, so "% since start of range" shrinks toward 0 as the baseline
+      // grows too - not a useful signal here. Show the absolute amount only.
+      tooltip: this.buildDeltaTooltip(unit, displayValues, false)
     };
     const latest = displayValues.length ? displayValues[displayValues.length - 1] : 0;
     this.storageSummary = `${this.formatNumber(latest)} ${unit}`;
@@ -408,12 +410,12 @@ export class AppComponent implements OnDestroy {
     return ((values[index] - first) / first) * 100;
   }
 
-  private buildDeltaTooltip(unit: string, values: number[]): ChartOptions['tooltip'] {
+  private buildDeltaTooltip(unit: string, values: number[], showPercentSinceStart: boolean = true): ChartOptions['tooltip'] {
     return {
       theme: 'dark',
       custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
         const value = this.formatNumber(values[dataPointIndex] ?? 0);
-        const hasReference = dataPointIndex > 0 && !!values[0];
+        const hasReference = showPercentSinceStart && dataPointIndex > 0 && !!values[0];
         const percentLine = !hasReference ? '' : (() => {
           const change = this.percentChange(values, dataPointIndex);
           const sign = change >= 0 ? '+' : '';

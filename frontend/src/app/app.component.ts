@@ -48,6 +48,7 @@ interface OverviewPoint {
   totalBandwidthUsed: number | null;
   uptimePercent: number;
   estimatedPayout: number | null;
+  currentMonthPayout: number | null;
 }
 
 interface OverviewResponse {
@@ -105,6 +106,8 @@ export class AppComponent implements OnDestroy {
   public nodes: NodeCard[] = [];
   public payoutSummary = '';
   public payoutDeltaText = '';
+  public currentPayoutSummary = '';
+  public currentPayoutDeltaText = '';
   public payoutInterval: Interval = '30m';
   public payoutRange: Range = 30;
   public payoutUnit: Unit = 'Auto';
@@ -431,6 +434,15 @@ export class AppComponent implements OnDestroy {
     const latest = displayValues.length ? displayValues[displayValues.length - 1] : 0;
     this.payoutSummary = `US$ ${latest.toFixed(2)}`;
     this.payoutDeltaText = this.formatDelta(displayValues, unit);
+
+    // currentMonthPayout is the actual payout accrued so far this month (as opposed to
+    // estimatedPayout, which is Storj's projection for the full month) - same cents source.
+    const rawCurrentValues = data.data.map(point => point.currentMonthPayout ?? 0);
+    const currentValues = rawCurrentValues.map(val => (typeof val === 'number' ? val : parseFloat(String(val))) / 100);
+    const displayCurrentValues = currentValues.slice(-this.payoutRange);
+    const latestCurrent = displayCurrentValues.length ? displayCurrentValues[displayCurrentValues.length - 1] : 0;
+    this.currentPayoutSummary = `US$ ${latestCurrent.toFixed(2)}`;
+    this.currentPayoutDeltaText = this.formatDelta(displayCurrentValues, unit);
   }
 
   private updateUptimeChart(): void {

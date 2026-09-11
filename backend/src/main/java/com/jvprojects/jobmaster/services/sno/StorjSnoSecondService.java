@@ -135,6 +135,9 @@ public class StorjSnoSecondService {
             if (estimatedPayout.getCurrentMonthExpectations() != null) {
                 second.setEstimatedPayout(estimatedPayout.getCurrentMonthExpectations());
             }
+            if (estimatedPayout.getCurrentMonth() != null && estimatedPayout.getCurrentMonth().getPayout() != null) {
+                second.setCurrentMonthPayout(estimatedPayout.getCurrentMonth().getPayout());
+            }
         }
 
         List<BandwidthDaily> bandwidthDaily = satellites.getBandwidthDaily();

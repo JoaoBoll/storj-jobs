@@ -73,12 +73,6 @@
 				<div class="metric-window">últimos {{ storageInterval }}:</div>
 				<div class="metric-foot"><span class="positive">{{ storageDeltaText }}</span></div>
 			</article>
-			<article class="metric-card accent-green" style="background: linear-gradient(135deg, #1dd1a1 0%, #10ac84 100%);">
-				<div class="metric-heading"><span>Estimated Payout</span><span class="metric-symbol">$</span></div>
-				<strong>{{ payoutSummary }}</strong>
-				<div class="metric-window">últimos {{ payoutInterval }}:</div>
-				<div class="metric-foot"><span class="positive">{{ payoutDeltaText }}</span></div>
-			</article>
 			<article class="metric-card accent-amber">
 				<div class="metric-heading"><span>Trash</span><span class="metric-symbol">#</span></div>
 				<strong>{{ trashSummary }}</strong>
@@ -90,6 +84,21 @@
 				<strong>{{ uptimeSummary }}</strong>
 				<div class="metric-window">últimos {{ uptimeInterval }}:</div>
 				<div class="metric-foot"><span class="positive">{{ uptimeDeltaText }}</span></div>
+			</article>
+		</section>
+
+		<section class="metric-grid metric-grid-secondary" *ngIf="activeView === 'Overview'">
+			<article class="metric-card accent-emerald">
+				<div class="metric-heading"><span>Valor a receber</span><span class="metric-symbol">$</span></div>
+				<strong>{{ currentPayoutSummary }}</strong>
+				<div class="metric-window">acumulado no mês, últimos {{ payoutInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ currentPayoutDeltaText }}</span></div>
+			</article>
+			<article class="metric-card accent-emerald">
+				<div class="metric-heading"><span>Estimado</span><span class="metric-symbol">$</span></div>
+				<strong>{{ payoutSummary }}</strong>
+				<div class="metric-window">projeção do mês, últimos {{ payoutInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ payoutDeltaText }}</span></div>
 			</article>
 		</section>
 

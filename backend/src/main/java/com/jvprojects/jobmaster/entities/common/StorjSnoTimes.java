@@ -31,4 +31,7 @@ public class StorjSnoTimes extends StorjSno {
     @Column(name = "estimated_payout", precision = 10, scale = 2)
     private BigDecimal estimatedPayout;
 
+    @Column(name = "current_month_payout", precision = 10, scale = 2)
+    private BigDecimal currentMonthPayout;
+
 }

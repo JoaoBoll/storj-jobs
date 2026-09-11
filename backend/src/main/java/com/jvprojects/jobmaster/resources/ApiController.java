@@ -76,6 +76,7 @@ public class ApiController {
         long lastTotalBandwidth = 0;
         double lastUptime = 100;
         java.math.BigDecimal lastPayout = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal lastCurrentMonthPayout = java.math.BigDecimal.ZERO;
 
         for (int index = 0; index < points; index++) {
             OffsetDateTime bucketStart = start.plus(step.multipliedBy(index));
@@ -94,6 +95,7 @@ public class ApiController {
             long totalBandwidth;
             double uptime;
             java.math.BigDecimal payout;
+            java.math.BigDecimal currentMonthPayout;
 
             if (latest.isEmpty() && index > 0) {
                 storage = lastStorage;
@@ -103,6 +105,7 @@ public class ApiController {
                 totalBandwidth = lastTotalBandwidth;
                 uptime = lastUptime;
                 payout = lastPayout;
+                currentMonthPayout = lastCurrentMonthPayout;
             } else {
                 storage = sumOf(latest, StorjSnoSecond::getUsedDiskSpace);
                 trash = sumOf(latest, StorjSnoSecond::getTrashDiskSpace);
@@ -114,6 +117,7 @@ public class ApiController {
                 totalBandwidth = sumOf(latest, StorjSnoSecond::getUsedBandwidth);
                 uptime = weightedUptimeAverage(latest);
                 payout = sumOfBigDecimal(latest, StorjSnoSecond::getEstimatedPayout);
+                currentMonthPayout = sumOfBigDecimal(latest, StorjSnoSecond::getCurrentMonthPayout);
             }
 
             lastStorage = storage;
@@ -123,6 +127,7 @@ public class ApiController {
             lastTotalBandwidth = totalBandwidth;
             lastUptime = uptime;
             lastPayout = payout;
+            lastCurrentMonthPayout = currentMonthPayout;
 
             if (firstStorage == null && storage > 0) firstStorage = storage;
             if (firstTrash == null && trash > 0) firstTrash = trash;
@@ -136,7 +141,8 @@ public class ApiController {
                     egress,
                     totalBandwidth,
                     uptime,
-                    payout
+                    payout,
+                    currentMonthPayout
             ));
         }
 

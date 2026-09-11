@@ -17,7 +17,8 @@ public record OverviewResponse(
         Long egressTotal,
         Long totalBandwidthUsed,
         Double uptimePercent,
-        java.math.BigDecimal estimatedPayout
+        java.math.BigDecimal estimatedPayout,
+        java.math.BigDecimal currentMonthPayout
     ) {
     }
 }

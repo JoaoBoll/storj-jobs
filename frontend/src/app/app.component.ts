@@ -198,22 +198,27 @@ export class AppComponent {
       xaxis: { ...this.trashChart.xaxis, categories: trashLabels },
       tooltip: this.buildDeltaTooltip(this.trashUnit, trashValues)
     };
+    const ingressValues = bandwidthData.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit));
+    const egressValues = bandwidthData.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit));
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
-        { name: 'Ingress', data: bandwidthData.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit)) },
-        { name: 'Egress', data: bandwidthData.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit)) }
+        { name: 'Ingress', data: ingressValues },
+        { name: 'Egress', data: egressValues }
       ],
-      xaxis: { ...this.bandwidthChart.xaxis, categories: bandwidthLabels }
+      xaxis: { ...this.bandwidthChart.xaxis, categories: bandwidthLabels },
+      tooltip: this.buildPreviousDeltaTooltip(this.bandwidthUnit, [
+        { name: 'Ingress', values: ingressValues },
+        { name: 'Egress', values: egressValues }
+      ])
     };
     this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', uptimeData.data.map(point => point.uptimePercent), uptimeLabels);
   }
 
   private percentChange(values: number[], index: number): number {
-    if (index === 0) return 0;
-    const previous = values[index - 1];
-    if (!previous) return 0;
-    return ((values[index] - previous) / previous) * 100;
+    const first = values[0];
+    if (!first) return 0;
+    return ((values[index] - first) / first) * 100;
   }
 
   private buildDeltaTooltip(unit: string, values: number[]): ChartOptions['tooltip'] {
@@ -221,13 +226,35 @@ export class AppComponent {
       theme: 'dark',
       custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
         const value = this.formatNumber(values[dataPointIndex] ?? 0);
-        const change = this.percentChange(values, dataPointIndex);
-        const sign = change >= 0 ? '+' : '';
-        const color = change >= 0 ? '#c7f36b' : '#f4bb61';
+        const percentLine = dataPointIndex === 0 ? '' : (() => {
+          const change = this.percentChange(values, dataPointIndex);
+          const sign = change >= 0 ? '+' : '';
+          const color = change >= 0 ? '#c7f36b' : '#f4bb61';
+          return `<div style="color:${color};margin-top:4px;">${sign}${change.toFixed(2)}% since start of range</div>`;
+        })();
         return `<div style="padding:8px 10px;font:11px 'DM Mono',monospace;color:#e7ecee;background:#141b1f;border:1px solid #26323a;border-radius:6px;">`
           + `<div>${value} ${unit}</div>`
-          + `<div style="color:${color};margin-top:4px;">${sign}${change.toFixed(2)}% vs previous point</div>`
+          + percentLine
           + `</div>`;
+      }
+    };
+  }
+
+  private buildPreviousDeltaTooltip(unit: string, series: { name: string; values: number[] }[]): ChartOptions['tooltip'] {
+    return {
+      theme: 'dark',
+      custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
+        const rows = series.map(({ name, values }) => {
+          const value = this.formatNumber(values[dataPointIndex] ?? 0);
+          const deltaLine = dataPointIndex === 0 ? '' : (() => {
+            const delta = values[dataPointIndex] - values[dataPointIndex - 1];
+            const sign = delta >= 0 ? '+' : '';
+            const color = delta >= 0 ? '#c7f36b' : '#f4bb61';
+            return ` <span style="color:${color};">(${sign}${this.formatNumber(delta)} vs previous point)</span>`;
+          })();
+          return `<div style="margin-top:6px;"><strong>${name}:</strong> ${value} ${unit}${deltaLine}</div>`;
+        }).join('');
+        return `<div style="padding:8px 10px;font:11px 'DM Mono',monospace;color:#e7ecee;background:#141b1f;border:1px solid #26323a;border-radius:6px;">${rows}</div>`;
       }
     };
   }

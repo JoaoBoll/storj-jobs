@@ -9,6 +9,7 @@ import com.jvprojects.jobmaster.services.sno.StorjSnoMinuteService;
 import com.jvprojects.jobmaster.services.sno.StorjSnoMonthService;
 import com.jvprojects.jobmaster.services.sno.StorjSnoSecondService;
 import com.jvprojects.jobmaster.services.sno.StorjSnoWeekService;
+import com.jvprojects.jobmaster.services.satellites.StorjSatellitesService;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -31,6 +32,7 @@ public class StorjSnoCollectorJob implements Job {
     private static final Logger log = LoggerFactory.getLogger(StorjSnoCollectorJob.class);
 
     private final StorjSnoSecondService storjSnoSecondService;
+    private final StorjSatellitesService storjSatellitesService;
     private final StorjSnoMinuteService storjSnoMinuteService;
     private final StorjSno5mService storjSno5mService;
     private final StorjSno15mService storjSno15mService;
@@ -41,6 +43,7 @@ public class StorjSnoCollectorJob implements Job {
     private final StorjSnoMonthService storjSnoMonthService;
 
     public StorjSnoCollectorJob(StorjSnoSecondService storjSnoSecondService,
+                                 StorjSatellitesService storjSatellitesService,
                                  StorjSnoMinuteService storjSnoMinuteService,
                                  StorjSno5mService storjSno5mService,
                                  StorjSno15mService storjSno15mService,
@@ -50,6 +53,7 @@ public class StorjSnoCollectorJob implements Job {
                                  StorjSnoWeekService storjSnoWeekService,
                                  StorjSnoMonthService storjSnoMonthService) {
         this.storjSnoSecondService = storjSnoSecondService;
+        this.storjSatellitesService = storjSatellitesService;
         this.storjSnoMinuteService = storjSnoMinuteService;
         this.storjSno5mService = storjSno5mService;
         this.storjSno15mService = storjSno15mService;
@@ -72,6 +76,7 @@ public class StorjSnoCollectorJob implements Job {
         if (now.getSecond() != 0) {
             return;
         }
+        storjSatellitesService.saveAll(storjSatellitesService.fetchStorjSatellites());
         storjSnoMinuteService.runJob();
 
         int minute = now.getMinute();

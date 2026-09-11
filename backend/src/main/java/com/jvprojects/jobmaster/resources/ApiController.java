@@ -67,6 +67,15 @@ public class ApiController {
         java.util.Map<String, BandwidthState> ingressState = new java.util.HashMap<>();
         java.util.Map<String, BandwidthState> egressState = new java.util.HashMap<>();
 
+        // Carried forward when a bucket has no records, so a momentary gap between
+        // collection ticks doesn't render as a drop to 0 on the chart.
+        long lastStorage = 0;
+        long lastTrash = 0;
+        long lastIngress = 0;
+        long lastEgress = 0;
+        double lastUptime = 100;
+        java.math.BigDecimal lastPayout = java.math.BigDecimal.ZERO;
+
         for (int index = 0; index < points; index++) {
             OffsetDateTime bucketStart = start.plus(step.multipliedBy(index));
             OffsetDateTime bucketEnd = bucketStart.plus(step);
@@ -76,12 +85,37 @@ public class ApiController {
                             && record.getCreatedAt().isBefore(bucketEnd))
                     .toList();
             Collection<StorjSnoSecond> latest = latestPerNode(bucket);
-            long storage = sumOf(latest, StorjSnoSecond::getUsedDiskSpace);
-            long trash = sumOf(latest, StorjSnoSecond::getTrashDiskSpace);
-            long ingress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getIngressTotal, ingressState, bucketStart);
-            long egress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getEgressTotal, egressState, bucketStart);
-            double uptime = weightedUptimeAverage(latest);
-            java.math.BigDecimal payout = sumOfBigDecimal(latest, StorjSnoSecond::getEstimatedPayout);
+
+            long storage;
+            long trash;
+            long ingress;
+            long egress;
+            double uptime;
+            java.math.BigDecimal payout;
+
+            if (latest.isEmpty() && index > 0) {
+                storage = lastStorage;
+                trash = lastTrash;
+                ingress = lastIngress;
+                egress = lastEgress;
+                uptime = lastUptime;
+                payout = lastPayout;
+            } else {
+                storage = sumOf(latest, StorjSnoSecond::getUsedDiskSpace);
+                trash = sumOf(latest, StorjSnoSecond::getTrashDiskSpace);
+                ingress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getIngressTotal, ingressState, bucketStart);
+                egress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getEgressTotal, egressState, bucketStart);
+                uptime = weightedUptimeAverage(latest);
+                payout = sumOfBigDecimal(latest, StorjSnoSecond::getEstimatedPayout);
+            }
+
+            lastStorage = storage;
+            lastTrash = trash;
+            lastIngress = ingress;
+            lastEgress = egress;
+            lastUptime = uptime;
+            lastPayout = payout;
+
             if (firstStorage == null && storage > 0) firstStorage = storage;
             if (firstTrash == null && trash > 0) firstTrash = trash;
             resultPoints.add(new OverviewResponse.Point(

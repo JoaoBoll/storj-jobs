@@ -10,6 +10,8 @@ interface NodeResponse {
   url: string;
   enabled: boolean;
   availableDiskSpace: number | null;
+  usedDiskSpace: number | null;
+  totalDiskSpace: number | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -19,8 +21,9 @@ interface NodeCard {
   id: string;
   url: string;
   status: string;
-  storage: string;
   availableDiskSpace: number | null;
+  usedDiskSpace: number | null;
+  totalDiskSpace: number | null;
   accent: string;
 }
 
@@ -32,7 +35,7 @@ interface NodeCard {
 })
 export class AppComponent {
 
-  public activeView = 'Overview';
+  public activeView = 'Nodes';
   public lastSync = new Date();
   public toastMessage = '';
   public chartOptions: ChartOptions;
@@ -81,8 +84,9 @@ export class AppComponent {
           id: node.nodeId || node.id,
           url: node.url,
           status: node.enabled ? 'Online' : 'Disabled',
-          storage: this.formatBytes(node.availableDiskSpace),
           availableDiskSpace: node.availableDiskSpace,
+          usedDiskSpace: node.usedDiskSpace,
+          totalDiskSpace: node.totalDiskSpace,
           accent: ['lime', 'cyan', 'amber'][index % 3]
         }));
         this.lastSync = new Date();
@@ -107,6 +111,13 @@ export class AppComponent {
     const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const unitIndex = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, unitIndex)).toFixed(1)} ${units[unitIndex]}`;
+  }
+
+  public diskUsage(node: NodeCard): number {
+    if (!node.usedDiskSpace || !node.totalDiskSpace) {
+      return 0;
+    }
+    return Math.min(100, Math.round((node.usedDiskSpace / node.totalDiskSpace) * 100));
   }
 
   public selectView(view: string): void {

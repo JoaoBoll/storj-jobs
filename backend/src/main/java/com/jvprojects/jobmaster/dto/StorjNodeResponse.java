@@ -9,6 +9,8 @@ public record StorjNodeResponse(
         String url,
         Boolean enabled,
         Long availableDiskSpace,
+        Long usedDiskSpace,
+        Long totalDiskSpace,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {

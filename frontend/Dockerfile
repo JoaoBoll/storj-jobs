@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm ci --include=dev
 
 COPY . .
-RUN npx --no-install ng build --configuration production
+RUN npx --no-install ng build
 
 FROM nginx:1.27-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf

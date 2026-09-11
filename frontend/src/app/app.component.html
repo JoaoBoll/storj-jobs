@@ -10,13 +10,13 @@
 
 		<div class="nav-label">Workspace</div>
 		<nav>
-			<button class="nav-item active" type="button" (click)="selectView('Overview')">
+			<button class="nav-item" [class.active]="activeView === 'Overview'" type="button" (click)="selectView('Overview')">
 				<span class="nav-icon">+</span><span>Overview</span>
 			</button>
-			<button class="nav-item" type="button" (click)="selectView('Nodes')">
+			<button class="nav-item" [class.active]="activeView === 'Nodes'" type="button" (click)="selectView('Nodes')">
 				<span class="nav-icon">[]</span><span>Nodes</span><span class="nav-count">{{ nodes.length }}</span>
 			</button>
-			<button class="nav-item" type="button" (click)="selectView('Jobs')">
+			<button class="nav-item" [class.active]="activeView === 'Jobs'" type="button" (click)="selectView('Jobs')">
 				<span class="nav-icon">/</span><span>Jobs & schedules</span>
 			</button>
 		</nav>
@@ -87,20 +87,20 @@
 			</article>
 		</section>
 
-		<section class="section-heading"><div><p class="eyebrow">Registered infrastructure</p><h3>Nodes & containers</h3></div><button class="outline-button" type="button">+ Add node</button></section>
+		<section class="section-heading"><div><p class="eyebrow">Registered infrastructure</p><h3>Nodes & containers</h3></div></section>
 		<section class="node-grid">
 			<article class="node-card" *ngFor="let node of nodes">
 				<div class="node-card-top"><div class="node-avatar" [ngClass]="node.accent">S</div><div><h4>{{ node.name }}</h4><span class="node-id">{{ node.id }}</span></div><span class="node-status" [class.degraded-status]="node.status === 'Degraded'"><i></i>{{ node.status }}</span></div>
 				<div class="node-url">{{ node.url }} <span>...</span></div>
 				<div class="node-stats"><div><span>Node ID</span><strong>{{ node.id }}</strong></div><div><span>Database status</span><strong>{{ node.status }}</strong></div></div>
 				<div class="storage-row"><div><span>Available disk space</span><strong>{{ node.storage }}</strong></div></div>
-				<button class="node-link" type="button">View node details <span>-></span></button>
+				<div class="node-link">Registered node <span>DB</span></div>
 			</article>
 		</section>
 
-		<section class="section-heading jobs-heading"><div><p class="eyebrow">Quartz scheduler</p><h3>Collection jobs</h3></div><span class="job-summary"><i class="status-dot online"></i>2 running / 4 queued</span></section>
+		<section class="section-heading jobs-heading"><div><p class="eyebrow">Quartz scheduler</p><h3>Collection jobs</h3></div><span class="job-summary"><i class="status-dot online"></i>Managed by scheduler</span></section>
 		<section class="panel jobs-panel">
-			<div class="job-row" *ngFor="let job of jobs"><div class="job-name"><span class="job-icon">&#8635;</span><div><strong>{{ job.label }}</strong><span>{{ job.cadence }}</span></div></div><span class="job-last">{{ job.lastRun }}</span><span class="job-state" [class.running]="job.state === 'Running'"><i></i>{{ runningJob === job.endpoint ? 'Running now' : job.state }}</span><button class="run-button" type="button" [disabled]="runningJob !== ''" (click)="runJob(job.endpoint, job.label)">{{ runningJob === job.endpoint ? '...' : 'Run now' }}</button></div>
+			<div class="job-row" *ngFor="let job of jobs"><div class="job-name"><span class="job-icon">&#8635;</span><div><strong>{{ job.label }}</strong><span>{{ job.cadence }}</span></div></div><span class="job-state running"><i></i>{{ job.state }}</span><span class="job-locked">Automatic</span></div>
 		</section>
 
 		<div class="toast" *ngIf="toastMessage">{{ toastMessage }}</div>

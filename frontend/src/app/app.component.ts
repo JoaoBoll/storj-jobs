@@ -34,19 +34,18 @@ export class AppComponent {
 
   public activeView = 'Overview';
   public lastSync = new Date();
-  public runningJob = '';
   public toastMessage = '';
   public chartOptions: ChartOptions;
 
   public nodes: NodeCard[] = [];
 
   public readonly jobs = [
-    { label: 'SNO second', endpoint: 'snoSeconds', cadence: 'Every 5 seconds', state: 'Running', lastRun: '12 sec ago', tone: 'green' },
-    { label: 'SNO minute', endpoint: 'snoMinute', cadence: 'Every minute', state: 'Running', lastRun: '42 sec ago', tone: 'green' },
-    { label: 'SNO hour', endpoint: 'snoHour', cadence: 'Hourly', state: 'Queued', lastRun: '18 min ago', tone: 'blue' },
-    { label: 'SNO day', endpoint: 'snoDay', cadence: 'Daily', state: 'Queued', lastRun: 'Today, 00:00', tone: 'blue' },
-    { label: 'SNO week', endpoint: 'snoWeek', cadence: 'Weekly', state: 'Queued', lastRun: 'Sun, 00:00', tone: 'blue' },
-    { label: 'SNO month', endpoint: 'snoMonth', cadence: 'Monthly', state: 'Queued', lastRun: '01 Sep, 00:00', tone: 'blue' }
+    { label: 'SNO second', cadence: 'Every 5 seconds', state: 'Scheduled' },
+    { label: 'SNO minute', cadence: 'Every minute', state: 'Scheduled' },
+    { label: 'SNO hour', cadence: 'Hourly', state: 'Scheduled' },
+    { label: 'SNO day', cadence: 'Daily', state: 'Scheduled' },
+    { label: 'SNO week', cadence: 'Weekly', state: 'Scheduled' },
+    { label: 'SNO month', cadence: 'Monthly', state: 'Scheduled' }
   ];
 
   constructor(private readonly http: HttpClient) {
@@ -114,23 +113,4 @@ export class AppComponent {
     this.activeView = view;
   }
 
-  public now(): Date {
-    return new Date();
-  }
-
-  public runJob(endpoint: string, label: string): void {
-    this.runningJob = endpoint;
-    this.toastMessage = '';
-    this.http.get(`/api/job/${endpoint}`, { responseType: 'text' }).subscribe({
-      next: () => {
-        this.runningJob = '';
-        this.lastSync = new Date();
-        this.toastMessage = `${label} disparado com sucesso`;
-      },
-      error: () => {
-        this.runningJob = '';
-        this.toastMessage = `Não foi possível executar ${label}`;
-      }
-    });
-  }
 }

@@ -4,7 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { SplineAreaChartComponent } from './shared/charts/spline-area-chart/spline-area-chart.component';
 import { ChartOptions } from './models/chart-options.model';
 
-type Unit = 'MB' | 'GB' | 'TB';
+type Unit = 'Auto' | 'KB' | 'MB' | 'GB' | 'TB';
+type ResolvedUnit = 'KB' | 'MB' | 'GB' | 'TB';
 type Interval = '5s' | '15s' | '30s' | '5m' | '15m' | '30m' | '1h' | '1d' | '1w' | '1mo';
 
 interface NodeResponse {
@@ -58,9 +59,9 @@ export class AppComponent {
   public activeView = 'Overview';
   public lastSync = new Date();
   public toastMessage = '';
-  public storageUnit: Unit = 'MB';
-  public trashUnit: Unit = 'MB';
-  public bandwidthUnit: Unit = 'MB';
+  public storageUnit: Unit = 'Auto';
+  public trashUnit: Unit = 'Auto';
+  public bandwidthUnit: Unit = 'Auto';
   public readonly rangeOptions = RANGE_OPTIONS;
   public storageInterval: Interval = '5m';
   public trashInterval: Interval = '5m';
@@ -165,14 +166,6 @@ export class AppComponent {
     return this.overviewData.get(this.overviewKey(interval, range)) ?? { interval, points: range, data: [] };
   }
 
-  public get storageOverview(): OverviewResponse {
-    return this.overviewFor(this.storageInterval, this.storageRange);
-  }
-
-  public get uptimeOverview(): OverviewResponse {
-    return this.overviewFor(this.uptimeInterval, this.uptimeRange);
-  }
-
   private updateChart(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): void {
     if (chart === 'storage') this.updateStorageChart();
     else if (chart === 'trash') this.updateTrashChart();
@@ -183,36 +176,43 @@ export class AppComponent {
   private updateStorageChart(): void {
     const data = this.overviewFor(this.storageInterval, this.storageRange);
     const labels = data.data.map(point => this.formatLabel(point.label, this.storageInterval));
-    const values = data.data.map(point => this.toUnit(point.storageUsed, this.storageUnit));
+    const rawValues = data.data.map(point => point.storageUsed ?? 0);
+    const unit = this.resolveUnit(this.storageUnit, this.representativeBytes(rawValues));
+    const values = rawValues.map(bytes => this.toUnit(bytes, unit));
     this.storageChart = {
       ...this.storageChart,
-      series: [{ name: `Storage used (${this.storageUnit})`, data: values }],
+      series: [{ name: `Storage used (${unit})`, data: values }],
       xaxis: { ...this.storageChart.xaxis, categories: labels },
-      tooltip: this.buildDeltaTooltip(this.storageUnit, values)
+      tooltip: this.buildDeltaTooltip(unit, values)
     };
     const latest = values.length ? values[values.length - 1] : 0;
-    this.storageSummary = `${this.formatNumber(latest)} ${this.storageUnit}`;
+    this.storageSummary = `${this.formatNumber(latest)} ${unit}`;
   }
 
   private updateTrashChart(): void {
     const data = this.overviewFor(this.trashInterval, this.trashRange);
     const labels = data.data.map(point => this.formatLabel(point.label, this.trashInterval));
-    const values = data.data.map(point => this.toUnit(point.trashUsed, this.trashUnit));
+    const rawValues = data.data.map(point => point.trashUsed ?? 0);
+    const unit = this.resolveUnit(this.trashUnit, this.representativeBytes(rawValues));
+    const values = rawValues.map(bytes => this.toUnit(bytes, unit));
     this.trashChart = {
       ...this.trashChart,
-      series: [{ name: `Trash (${this.trashUnit})`, data: values }],
+      series: [{ name: `Trash (${unit})`, data: values }],
       xaxis: { ...this.trashChart.xaxis, categories: labels },
-      tooltip: this.buildDeltaTooltip(this.trashUnit, values)
+      tooltip: this.buildDeltaTooltip(unit, values)
     };
     const latest = values.length ? values[values.length - 1] : 0;
-    this.trashSummary = `${this.formatNumber(latest)} ${this.trashUnit}`;
+    this.trashSummary = `${this.formatNumber(latest)} ${unit}`;
   }
 
   private updateBandwidthChart(): void {
     const data = this.overviewFor(this.bandwidthInterval, this.bandwidthRange);
     const labels = data.data.map(point => this.formatLabel(point.label, this.bandwidthInterval));
-    const ingressValues = data.data.map(point => this.toUnit(point.ingressTotal, this.bandwidthUnit));
-    const egressValues = data.data.map(point => this.toUnit(point.egressTotal, this.bandwidthUnit));
+    const rawIngress = data.data.map(point => point.ingressTotal ?? 0);
+    const rawEgress = data.data.map(point => point.egressTotal ?? 0);
+    const unit = this.resolveUnit(this.bandwidthUnit, Math.max(this.representativeBytes(rawIngress), this.representativeBytes(rawEgress)));
+    const ingressValues = rawIngress.map(bytes => this.toUnit(bytes, unit));
+    const egressValues = rawEgress.map(bytes => this.toUnit(bytes, unit));
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
@@ -220,16 +220,16 @@ export class AppComponent {
         { name: 'Egress', data: egressValues }
       ],
       xaxis: { ...this.bandwidthChart.xaxis, categories: labels },
-      tooltip: this.buildPreviousDeltaTooltip(this.bandwidthUnit, [
+      tooltip: this.buildPreviousDeltaTooltip(unit, [
         { name: 'Ingress', values: ingressValues },
         { name: 'Egress', values: egressValues }
       ])
     };
     const totalIngress = this.formatNumber(ingressValues.reduce((sum, value) => sum + value, 0));
     const totalEgress = this.formatNumber(egressValues.reduce((sum, value) => sum + value, 0));
-    this.bandwidthSummary = `Total Ingress: ${totalIngress} ${this.bandwidthUnit} · Total Egress: ${totalEgress} ${this.bandwidthUnit}`;
-    this.bandwidthIngressTotal = `${totalIngress} ${this.bandwidthUnit}`;
-    this.bandwidthEgressTotal = `${totalEgress} ${this.bandwidthUnit}`;
+    this.bandwidthSummary = `Total Ingress: ${totalIngress} ${unit} · Total Egress: ${totalEgress} ${unit}`;
+    this.bandwidthIngressTotal = `${totalIngress} ${unit}`;
+    this.bandwidthEgressTotal = `${totalEgress} ${unit}`;
   }
 
   private updateUptimeChart(): void {
@@ -318,14 +318,30 @@ export class AppComponent {
     return `${hours}:${minutes}`;
   }
 
-  public toUnit(bytes: number | null, unit: Unit): number {
+  public toUnit(bytes: number | null, unit: ResolvedUnit): number {
     if (bytes === null || bytes === undefined) return 0;
-    const divisor = { MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }[unit];
+    const divisor = { KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }[unit];
     return Number((bytes / divisor).toFixed(2));
   }
 
+  private resolveUnit(unit: Unit, referenceBytes: number): ResolvedUnit {
+    if (unit !== 'Auto') return unit;
+    const abs = Math.abs(referenceBytes);
+    if (abs >= 1024 ** 4) return 'TB';
+    if (abs >= 1024 ** 3) return 'GB';
+    if (abs >= 1024 ** 2) return 'MB';
+    return 'KB';
+  }
+
+  private representativeBytes(rawValues: number[]): number {
+    const last = rawValues[rawValues.length - 1];
+    return last || Math.max(0, ...rawValues);
+  }
+
   public formatValue(bytes: number | null): string {
-    return bytes === null || bytes === undefined ? 'Not available' : `${this.toUnit(bytes, 'MB')} MB`;
+    if (bytes === null || bytes === undefined) return 'Not available';
+    const unit = this.resolveUnit('Auto', bytes);
+    return `${this.toUnit(bytes, unit)} ${unit}`;
   }
 
   public diskUsage(node: NodeCard): number {

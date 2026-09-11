@@ -1,5 +1,6 @@
 import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { SplineAreaChartComponent } from './shared/charts/spline-area-chart/spline-area-chart.component';
 import { ChartOptions } from './models/chart-options.model';
@@ -39,6 +40,7 @@ interface OverviewPoint {
   ingressTotal: number | null;
   egressTotal: number | null;
   uptimePercent: number;
+  estimatedPayout: number | null;
 }
 
 interface OverviewResponse {
@@ -49,13 +51,13 @@ interface OverviewResponse {
 
 const RANGE_OPTIONS = [10, 20, 30, 60, 90] as const;
 type Range = typeof RANGE_OPTIONS[number];
-type ChartKey = 'storage' | 'trash' | 'bandwidth' | 'uptime';
+type ChartKey = 'storage' | 'trash' | 'bandwidth' | 'uptime' | 'payout';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
-  imports: [CommonModule, SplineAreaChartComponent]
+  imports: [CommonModule, FormsModule, SplineAreaChartComponent]
 })
 export class AppComponent implements OnDestroy {
   public activeView = 'Overview';
@@ -64,6 +66,8 @@ export class AppComponent implements OnDestroy {
   public storageUnit: Unit = 'Auto';
   public trashUnit: Unit = 'Auto';
   public bandwidthUnit: Unit = 'Auto';
+  public dateFilterStart: string = '';
+  public dateFilterEnd: string = '';
   public readonly rangeOptions = RANGE_OPTIONS;
   public globalInterval: Interval = '5m';
   public get storageInterval(): Interval { return this.globalInterval; }
@@ -89,8 +93,14 @@ export class AppComponent implements OnDestroy {
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
   public bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
+  public payoutChart = this.createChart('#1dd1a1', 'Estimated Payout');
   public uptimeChart = this.createChart('#83a9ff', 'Uptime %');
   public nodes: NodeCard[] = [];
+  public payoutSummary = '';
+  public payoutDeltaText = '';
+  public payoutInterval: Interval = '30m';
+  public payoutRange: Range = 30;
+  public payoutUnit: Unit = 'Auto';
 
   public readonly jobs = [
     { label: 'SNO 5m', cadence: 'Every 5 minutes', state: 'Scheduled' },
@@ -102,7 +112,7 @@ export class AppComponent implements OnDestroy {
     { label: 'SNO month', cadence: 'Monthly', state: 'Scheduled' }
   ];
 
-  private readonly chartKeys: readonly ChartKey[] = ['storage', 'trash', 'bandwidth', 'uptime'];
+  private readonly chartKeys: readonly ChartKey[] = ['bandwidth', 'storage', 'payout', 'trash', 'uptime'];
   private sharedTimer?: ReturnType<typeof setInterval>;
   private uptimeTimer?: ReturnType<typeof setInterval>;
 
@@ -116,6 +126,11 @@ export class AppComponent implements OnDestroy {
   ngOnDestroy(): void {
     if (this.sharedTimer) clearInterval(this.sharedTimer);
     if (this.uptimeTimer) clearInterval(this.uptimeTimer);
+  }
+
+  public selectPayoutInterval(interval: Interval): void {
+    this.payoutInterval = interval;
+    this.fetchOverview('payout', true);
   }
 
   private refreshMsFor(interval: Interval): number {
@@ -165,7 +180,17 @@ export class AppComponent implements OnDestroy {
     }
     // Fetch one extra point for accurate delta calculation on first visible point
     const pointsToFetch = range + 1;
-    this.http.get<OverviewResponse>(`/api/job/overview?interval=${interval}&points=${pointsToFetch}`).subscribe({
+    let url = `/api/job/overview?interval=${interval}&points=${pointsToFetch}`;
+
+    // Add date filter parameters if provided
+    if (this.dateFilterStart) {
+      url += `&startDate=${this.dateFilterStart}`;
+    }
+    if (this.dateFilterEnd) {
+      url += `&endDate=${this.dateFilterEnd}`;
+    }
+
+    this.http.get<OverviewResponse>(url).subscribe({
       next: (overview) => {
         this.overviewData.set(key, overview);
         this.updateChart(chart);
@@ -193,6 +218,7 @@ export class AppComponent implements OnDestroy {
     if (chart === 'storage') return this.storageInterval;
     if (chart === 'trash') return this.trashInterval;
     if (chart === 'bandwidth') return this.bandwidthInterval;
+    if (chart === 'payout') return this.payoutInterval;
     return this.uptimeInterval;
   }
 
@@ -200,6 +226,7 @@ export class AppComponent implements OnDestroy {
     if (chart === 'storage') return this.storageRange;
     if (chart === 'trash') return this.trashRange;
     if (chart === 'bandwidth') return this.bandwidthRange;
+    if (chart === 'payout') return this.payoutRange;
     return this.uptimeRange;
   }
 
@@ -218,6 +245,7 @@ export class AppComponent implements OnDestroy {
     if (chart === 'storage') this.updateStorageChart();
     else if (chart === 'trash') this.updateTrashChart();
     else if (chart === 'bandwidth') this.updateBandwidthChart();
+    else if (chart === 'payout') this.updatePayoutChart();
     else this.updateUptimeChart();
   }
 
@@ -312,6 +340,19 @@ export class AppComponent implements OnDestroy {
     const percent = previous ? (delta / previous) * 100 : 0;
     const sign = delta >= 0 ? '+' : '';
     return `${sign}${this.formatNumber(delta)} ${unit} (${sign}${percent.toFixed(2)}%)`;
+  }
+
+  private updatePayoutChart(): void {
+    const data = this.overviewFor(this.payoutInterval, this.payoutRange);
+    const rawValues = data.data.map(point => point.estimatedPayout ?? 0);
+    const unit = 'USD';
+    const values = rawValues.map(val => typeof val === 'number' ? val : parseFloat(String(val)));
+    const displayValues = values.slice(-this.payoutRange);
+    const displayLabels = data.data.slice(-this.payoutRange).map(point => this.formatLabel(point.label, this.payoutInterval));
+    this.payoutChart = this.withData(this.payoutChart, 'Estimated Payout', displayValues, displayLabels);
+    const latest = displayValues.length ? displayValues[displayValues.length - 1] : 0;
+    this.payoutSummary = `$${this.formatNumber(latest)}`;
+    this.payoutDeltaText = this.formatDelta(displayValues, unit);
   }
 
   private updateUptimeChart(): void {
@@ -456,5 +497,32 @@ export class AppComponent implements OnDestroy {
 
   public selectView(view: string): void {
     this.activeView = view;
+  }
+
+  public applyDateFilter(): void {
+    if (!this.dateFilterStart || !this.dateFilterEnd) {
+      this.toastMessage = 'Please select both start and end dates';
+      return;
+    }
+
+    const startDate = new Date(this.dateFilterStart);
+    const endDate = new Date(this.dateFilterEnd);
+
+    if (startDate > endDate) {
+      this.toastMessage = 'Start date must be before end date';
+      return;
+    }
+
+    // Clear cache to force new request with date filter
+    this.overviewData.clear();
+    this.loadOverview(true);
+    this.toastMessage = `Filtered data from ${this.dateFilterStart} to ${this.dateFilterEnd}`;
+  }
+
+  public clearDateFilter(): void {
+    this.dateFilterStart = '';
+    this.dateFilterEnd = '';
+    this.loadOverview(true);
+    this.toastMessage = 'Date filter cleared';
   }
 }

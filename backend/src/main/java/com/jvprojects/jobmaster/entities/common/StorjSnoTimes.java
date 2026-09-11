@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 @MappedSuperclass
 public class StorjSnoTimes extends StorjSno {
@@ -25,5 +27,8 @@ public class StorjSnoTimes extends StorjSno {
 
     @Column(name = "uptime_score_count")
     private Integer uptimeScoreCount;
+
+    @Column(name = "estimated_payout", precision = 10, scale = 2)
+    private BigDecimal estimatedPayout;
 
 }

@@ -36,6 +36,13 @@
 			<div class="topbar-actions">
 				<span class="sync-time">Last sync {{ lastSync | date:'HH:mm:ss' }}</span>
 				<select class="auto-refresh-select" title="Interval (Storage/Trash/Bandwidth)" [value]="globalInterval" (change)="selectGlobalInterval($any($event.target).value)"><option value="5s">5s</option><option value="15s">15s</option><option value="30s">30s</option><option value="5m">5m</option><option value="15m">15m</option><option value="30m">30m</option><option value="1h">1h</option><option value="1d">1d</option><option value="1w">1w</option><option value="1mo">1mo</option></select>
+				<div style="display: flex; gap: 8px; align-items: center;">
+					<input type="date" [(ngModel)]="dateFilterStart" title="Start date" style="padding: 6px 10px; border: 1px solid #26323a; border-radius: 4px; background: #0f1419; color: #e7ecee; font-size: 12px;">
+					<span style="color: #6f7b83;">to</span>
+					<input type="date" [(ngModel)]="dateFilterEnd" title="End date" style="padding: 6px 10px; border: 1px solid #26323a; border-radius: 4px; background: #0f1419; color: #e7ecee; font-size: 12px;">
+					<button class="icon-button" type="button" title="Apply date filter" (click)="applyDateFilter()">🔍</button>
+					<button class="icon-button" type="button" title="Clear date filter" (click)="clearDateFilter()" *ngIf="dateFilterStart || dateFilterEnd">✕</button>
+				</div>
 				<button class="icon-button" type="button" title="Refresh data" (click)="loadNodes(); loadOverview(true)">&#8635;</button>
 				<div class="avatar">JM</div>
 			</div>
@@ -54,23 +61,29 @@
 		</section>
 
 		<section class="metric-grid" *ngIf="activeView === 'Overview'">
+			<article class="metric-card accent-cyan">
+				<div class="metric-heading"><span>Bandwidth</span><span class="metric-symbol">#</span></div>
+				<div class="bandwidth-split"><div><span>Ingress</span><strong>{{ bandwidthIngressTotal }}</strong></div><div><span>Egress</span><strong>{{ bandwidthEgressTotal }}</strong></div></div>
+				<div class="metric-window">últimos {{ bandwidthInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ bandwidthIngressDeltaText }}</span><span class="positive">{{ bandwidthEgressDeltaText }}</span></div>
+			</article>
 			<article class="metric-card accent-lime">
 				<div class="metric-heading"><span>Storage</span><span class="metric-symbol">#</span></div>
 				<strong>{{ storageSummary }}</strong>
 				<div class="metric-window">últimos {{ storageInterval }}:</div>
 				<div class="metric-foot"><span class="positive">{{ storageDeltaText }}</span></div>
 			</article>
+			<article class="metric-card accent-green" style="background: linear-gradient(135deg, #1dd1a1 0%, #10ac84 100%);">
+				<div class="metric-heading"><span>Estimated Payout</span><span class="metric-symbol">$</span></div>
+				<strong>{{ payoutSummary }}</strong>
+				<div class="metric-window">últimos {{ payoutInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ payoutDeltaText }}</span></div>
+			</article>
 			<article class="metric-card accent-amber">
 				<div class="metric-heading"><span>Trash</span><span class="metric-symbol">#</span></div>
 				<strong>{{ trashSummary }}</strong>
 				<div class="metric-window">últimos {{ trashInterval }}:</div>
 				<div class="metric-foot"><span class="positive">{{ trashDeltaText }}</span></div>
-			</article>
-			<article class="metric-card accent-cyan">
-				<div class="metric-heading"><span>Bandwidth</span><span class="metric-symbol">#</span></div>
-				<div class="bandwidth-split"><div><span>Ingress</span><strong>{{ bandwidthIngressTotal }}</strong></div><div><span>Egress</span><strong>{{ bandwidthEgressTotal }}</strong></div></div>
-				<div class="metric-window">últimos {{ bandwidthInterval }}:</div>
-				<div class="metric-foot"><span class="positive">{{ bandwidthIngressDeltaText }}</span><span class="positive">{{ bandwidthEgressDeltaText }}</span></div>
 			</article>
 			<article class="metric-card accent-blue">
 				<div class="metric-heading"><span>Availability</span><span class="metric-symbol">%</span></div>
@@ -81,9 +94,10 @@
 		</section>
 
 		<section class="overview-charts" *ngIf="activeView === 'Overview'">
-			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Storage</p><h3>Total storage used</h3></div><div class="chart-controls"><select [value]="storageRange" (change)="selectChartRange('storage', $any($event.target).value)"><option *ngFor="let range of rangeOptions" [value]="range">{{ range }} points</option></select><select [value]="storageUnit" (change)="selectUnit('storage', $any($event.target).value)"><option value="Auto">Auto</option><option value="KB">KB</option><option value="MB">MB</option><option value="GB">GB</option></select></div></div><app-spline-area-chart [chartOptions]="storageChart"></app-spline-area-chart></article>
-			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Trash</p><h3>Trash used</h3></div><div class="chart-controls"><select [value]="trashRange" (change)="selectChartRange('trash', $any($event.target).value)"><option *ngFor="let range of rangeOptions" [value]="range">{{ range }} points</option></select><select [value]="trashUnit" (change)="selectUnit('trash', $any($event.target).value)"><option value="Auto">Auto</option><option value="KB">KB</option><option value="MB">MB</option><option value="GB">GB</option></select></div></div><app-spline-area-chart [chartOptions]="trashChart"></app-spline-area-chart></article>
 			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Bandwidth</p><h3>Ingress & egress total</h3><span class="chart-summary">{{ bandwidthSummary }}</span></div><div class="chart-controls"><select [value]="bandwidthRange" (change)="selectChartRange('bandwidth', $any($event.target).value)"><option *ngFor="let range of rangeOptions" [value]="range">{{ range }} points</option></select><select [value]="bandwidthUnit" (change)="selectUnit('bandwidth', $any($event.target).value)"><option value="Auto">Auto</option><option value="KB">KB</option><option value="MB">MB</option><option value="GB">GB</option></select></div></div><app-spline-area-chart [chartOptions]="bandwidthChart"></app-spline-area-chart></article>
+			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Storage</p><h3>Total storage used</h3></div><div class="chart-controls"><select [value]="storageRange" (change)="selectChartRange('storage', $any($event.target).value)"><option *ngFor="let range of rangeOptions" [value]="range">{{ range }} points</option></select><select [value]="storageUnit" (change)="selectUnit('storage', $any($event.target).value)"><option value="Auto">Auto</option><option value="KB">KB</option><option value="MB">MB</option><option value="GB">GB</option></select></div></div><app-spline-area-chart [chartOptions]="storageChart"></app-spline-area-chart></article>
+			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Earnings</p><h3>Estimated payout</h3></div><div class="chart-controls"><select [value]="payoutRange" (change)="selectChartRange('payout', $any($event.target).value)"><option *ngFor="let range of rangeOptions" [value]="range">{{ range }} points</option></select><select [value]="payoutInterval" (change)="selectPayoutInterval($any($event.target).value)"><option value="30m">30m</option><option value="1h">1h</option><option value="1d">1d</option><option value="1w">1w</option><option value="1mo">1mo</option></select></div></div><app-spline-area-chart [chartOptions]="payoutChart"></app-spline-area-chart></article>
+			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Trash</p><h3>Trash used</h3></div><div class="chart-controls"><select [value]="trashRange" (change)="selectChartRange('trash', $any($event.target).value)"><option *ngFor="let range of rangeOptions" [value]="range">{{ range }} points</option></select><select [value]="trashUnit" (change)="selectUnit('trash', $any($event.target).value)"><option value="Auto">Auto</option><option value="KB">KB</option><option value="MB">MB</option><option value="GB">GB</option></select></div></div><app-spline-area-chart [chartOptions]="trashChart"></app-spline-area-chart></article>
 			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Availability</p><h3>Average satellite uptime</h3><span class="chart-summary">{{ uptimeSummary }}</span></div><div class="chart-controls"><select [value]="uptimeInterval" (change)="selectUptimeInterval($any($event.target).value)"><option value="30m">30m</option><option value="1h">1h</option><option value="1d">1d</option><option value="1w">1w</option><option value="1mo">1mo</option></select><select [value]="uptimeRange" (change)="selectChartRange('uptime', $any($event.target).value)"><option *ngFor="let range of rangeOptions" [value]="range">{{ range }} points</option></select><span class="chart-caption">%</span></div></div><app-spline-area-chart [chartOptions]="uptimeChart"></app-spline-area-chart></article>
 		</section>
 

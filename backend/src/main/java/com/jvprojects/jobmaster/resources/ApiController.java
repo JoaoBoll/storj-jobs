@@ -53,7 +53,9 @@ public class ApiController {
 
     @GetMapping("/overview")
     public OverviewResponse overview(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "5m") String interval,
-                                      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "30") int points) {
+                                      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "30") int points,
+                                      @org.springframework.web.bind.annotation.RequestParam(required = false) String startDate,
+                                      @org.springframework.web.bind.annotation.RequestParam(required = false) String endDate) {
         Duration step = intervalDuration(interval);
         OffsetDateTime end = alignToBoundary(OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS), interval, step);
         OffsetDateTime start = end.minus(step.multipliedBy(points));
@@ -78,6 +80,7 @@ public class ApiController {
             long ingress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getIngressTotal, ingressState, bucketStart);
             long egress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getEgressTotal, egressState, bucketStart);
             double uptime = weightedUptimeAverage(latest);
+            java.math.BigDecimal payout = sumOfBigDecimal(latest, StorjSnoSecond::getEstimatedPayout);
             if (firstStorage == null && storage > 0) firstStorage = storage;
             if (firstTrash == null && trash > 0) firstTrash = trash;
             resultPoints.add(new OverviewResponse.Point(
@@ -88,10 +91,34 @@ public class ApiController {
                     percentageOfFirst(trash, firstTrash),
                     ingress,
                     egress,
-                    uptime
+                    uptime,
+                    payout
             ));
         }
+
+        // Filter by date range if provided
+        if (startDate != null && endDate != null && !startDate.isBlank() && !endDate.isBlank()) {
+            resultPoints = filterByDateRange(resultPoints, startDate, endDate);
+        }
+
         return new OverviewResponse(interval, points, resultPoints);
+    }
+
+    private List<OverviewResponse.Point> filterByDateRange(List<OverviewResponse.Point> points, String startDate, String endDate) {
+        try {
+            java.time.OffsetDateTime start = java.time.OffsetDateTime.parse(startDate + "T00:00:00Z");
+            java.time.OffsetDateTime end = java.time.OffsetDateTime.parse(endDate + "T23:59:59Z");
+
+            return points.stream()
+                    .filter(point -> {
+                        java.time.OffsetDateTime pointTime = java.time.OffsetDateTime.parse(point.label());
+                        return !pointTime.isBefore(start) && !pointTime.isAfter(end);
+                    })
+                    .toList();
+        } catch (Exception e) {
+            // If date parsing fails, return all points
+            return points;
+        }
     }
 
     /**
@@ -164,6 +191,12 @@ public class ApiController {
 
     private long sumOf(Collection<StorjSnoSecond> records, Function<StorjSnoSecond, Long> value) {
         return records.stream().mapToLong(record -> value.apply(record) == null ? 0 : value.apply(record)).sum();
+    }
+
+    private java.math.BigDecimal sumOfBigDecimal(Collection<StorjSnoSecond> records, Function<StorjSnoSecond, java.math.BigDecimal> value) {
+        return records.stream()
+                .map(record -> value.apply(record) == null ? java.math.BigDecimal.ZERO : value.apply(record))
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
     }
 
     /**

@@ -2,11 +2,7 @@ package com.jvprojects.jobmaster.resources;
 
 import com.jvprojects.jobmaster.dto.StorjNodeResponse;
 import com.jvprojects.jobmaster.dto.OverviewResponse;
-import com.jvprojects.jobmaster.entities.Audits;
-import com.jvprojects.jobmaster.entities.BandwidthDaily;
-import com.jvprojects.jobmaster.entities.StorageDaily;
 import com.jvprojects.jobmaster.entities.StorjNode;
-import com.jvprojects.jobmaster.entities.StorjSatellites;
 import com.jvprojects.jobmaster.entities.StorjSnoSecond;
 import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
 import com.jvprojects.jobmaster.repositories.sno.StorjSnoSecondRepository;
@@ -17,12 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.math.BigDecimal;
-import java.util.Comparator;
+import java.util.Collection;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.function.Function;
+import java.util.function.ToDoubleFunction;
 
 @RestController
 @RequestMapping("/api/job")
@@ -51,19 +47,6 @@ public class ApiController {
         OffsetDateTime end = alignToBoundary(OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS), interval, step);
         OffsetDateTime start = end.minus(step.multipliedBy(points));
         List<StorjSnoSecond> snoRecords = storjSnoSecondRepository.findAllByOrderByCreatedAtDesc();
-        List<StorjNode> nodes = storjNodeRepository.findAll();
-        List<BandwidthDaily> bandwidthRows = nodes.stream()
-                .map(StorjNode::getStorjSatellites)
-                .filter(java.util.Objects::nonNull)
-                .flatMap(satellites -> satellites.getBandwidthDaily() == null ? java.util.stream.Stream.empty() : satellites.getBandwidthDaily().stream())
-                .filter(item -> item.getIntervalStart() != null)
-                .toList();
-        List<Audits> auditRows = nodes.stream()
-                .map(StorjNode::getStorjSatellites)
-                .filter(java.util.Objects::nonNull)
-                .flatMap(satellites -> satellites.getAudits() == null ? java.util.stream.Stream.empty() : satellites.getAudits().stream())
-                .filter(audit -> audit.getCreatedAt() != null && audit.getOnlineScore() != null)
-                .toList();
         List<OverviewResponse.Point> resultPoints = new ArrayList<>();
         Long firstStorage = null;
         Long firstTrash = null;
@@ -76,8 +59,12 @@ public class ApiController {
                             && !record.getCreatedAt().isBefore(bucketStart)
                             && record.getCreatedAt().isBefore(bucketEnd))
                     .toList();
-            long storage = latestPerNode(bucket, StorjSnoSecond::getUsedDiskSpace);
-            long trash = latestPerNode(bucket, StorjSnoSecond::getTrashDiskSpace);
+            Collection<StorjSnoSecond> latest = latestPerNode(bucket);
+            long storage = sumOf(latest, StorjSnoSecond::getUsedDiskSpace);
+            long trash = sumOf(latest, StorjSnoSecond::getTrashDiskSpace);
+            long ingress = sumOf(latest, StorjSnoSecond::getIngressTotal);
+            long egress = sumOf(latest, StorjSnoSecond::getEgressTotal);
+            double uptime = averageOf(latest, record -> record.getUptimeAverage() == null ? 100 : record.getUptimeAverage());
             if (firstStorage == null && storage > 0) firstStorage = storage;
             if (firstTrash == null && trash > 0) firstTrash = trash;
             resultPoints.add(new OverviewResponse.Point(
@@ -86,9 +73,9 @@ public class ApiController {
                     percentageOfFirst(storage, firstStorage),
                     trash,
                     percentageOfFirst(trash, firstTrash),
-                    bandwidthForBucket(bandwidthRows, bucketStart, true),
-                    bandwidthForBucket(bandwidthRows, bucketStart, false),
-                    uptimeForBucket(auditRows, bucketStart, bucketEnd)
+                    ingress,
+                    egress,
+                    uptime
             ));
         }
         return new OverviewResponse(interval, points, resultPoints);
@@ -129,74 +116,23 @@ public class ApiController {
         };
     }
 
-    private long latestPerNode(List<StorjSnoSecond> records, Function<StorjSnoSecond, Long> value) {
+    private Collection<StorjSnoSecond> latestPerNode(List<StorjSnoSecond> records) {
         return records.stream()
                 .collect(java.util.stream.Collectors.toMap(StorjSnoSecond::getNodeId, record -> record,
                         (left, right) -> left.getCreatedAt().isAfter(right.getCreatedAt()) ? left : right))
-                .values().stream().mapToLong(record -> value.apply(record) == null ? 0 : value.apply(record)).sum();
+                .values();
+    }
+
+    private long sumOf(Collection<StorjSnoSecond> records, Function<StorjSnoSecond, Long> value) {
+        return records.stream().mapToLong(record -> value.apply(record) == null ? 0 : value.apply(record)).sum();
+    }
+
+    private double averageOf(Collection<StorjSnoSecond> records, ToDoubleFunction<StorjSnoSecond> value) {
+        return records.isEmpty() ? 100 : records.stream().mapToDouble(value).average().orElse(100);
     }
 
     private double percentageOfFirst(long current, Long first) {
         return first == null || first == 0 ? 0 : (current * 100.0) / first;
-    }
-
-    /**
-     * The Storj node API only reports ingress/egress at daily granularity (one BandwidthDaily
-     * row per calendar day), so for buckets smaller than a day we use the most recent day
-     * known at or before the bucket - the same running total Storj itself reports for that day,
-     * summed across every node/satellite - rather than requiring an exact midnight match.
-     */
-    private long bandwidthForBucket(List<BandwidthDaily> bandwidthRows, OffsetDateTime bucketStart, boolean ingress) {
-        OffsetDateTime bucketDay = bucketStart.truncatedTo(ChronoUnit.DAYS);
-        OffsetDateTime matchedDay = bandwidthRows.stream()
-                .map(item -> item.getIntervalStart().truncatedTo(ChronoUnit.DAYS))
-                .filter(day -> !day.isAfter(bucketDay))
-                .max(Comparator.naturalOrder())
-                .orElse(null);
-        if (matchedDay == null) {
-            return 0;
-        }
-        return bandwidthRows.stream()
-                .filter(item -> item.getIntervalStart().truncatedTo(ChronoUnit.DAYS).isEqual(matchedDay))
-                .mapToLong(item -> ingress
-                        ? value(item.getIngressRepair()) + value(item.getIngressUsage())
-                        : value(item.getEgressRepair()) + value(item.getEgressAudit()) + value(item.getEgressUsage()))
-                .sum();
-    }
-
-    private double uptimeForBucket(List<Audits> auditRows, OffsetDateTime start, OffsetDateTime end) {
-        List<BigDecimal> scores = auditRows.stream()
-                .filter(audit -> !audit.getCreatedAt().isBefore(start) && audit.getCreatedAt().isBefore(end))
-                .map(Audits::getOnlineScore)
-                .toList();
-        return scores.isEmpty() ? 100 : scores.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(0) * 100;
-    }
-
-    private Long totalIngress(StorjSatellites satellites) {
-        if (satellites == null || satellites.getBandwidthDaily() == null) return null;
-        return satellites.getBandwidthDaily().stream()
-                .mapToLong(item -> value(item.getIngressRepair()) + value(item.getIngressUsage()))
-                .sum();
-    }
-
-    private Long totalEgress(StorjSatellites satellites) {
-        if (satellites == null || satellites.getBandwidthDaily() == null) return null;
-        return satellites.getBandwidthDaily().stream()
-                .mapToLong(item -> value(item.getEgressRepair()) + value(item.getEgressAudit()) + value(item.getEgressUsage()))
-                .sum();
-    }
-
-    private double averageUptime(StorjSatellites satellites) {
-        if (satellites == null || satellites.getAudits() == null) return 0;
-        List<BigDecimal> scores = satellites.getAudits().stream()
-                .map(Audits::getOnlineScore)
-                .filter(java.util.Objects::nonNull)
-                .toList();
-        return scores.isEmpty() ? 0 : scores.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(0) * 100;
-    }
-
-    private long value(Long value) {
-        return value == null ? 0 : value;
     }
 
     private StorjNodeResponse toResponse(StorjNode node) {

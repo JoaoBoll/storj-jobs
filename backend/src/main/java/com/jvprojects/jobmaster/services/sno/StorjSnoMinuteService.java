@@ -70,6 +70,9 @@ public class StorjSnoMinuteService {
                 minute.setOverusedDiskSpace(last.getOverusedDiskSpace());
                 minute.setTotalUsedBandwidth(totalUsedBandwidth);
                 minute.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
+                minute.setIngressTotal(last.getIngressTotal());
+                minute.setEgressTotal(last.getEgressTotal());
+                minute.setUptimeAverage(last.getUptimeAverage());
 
                 storjSnoMinuteRepository.save(minute);
             }

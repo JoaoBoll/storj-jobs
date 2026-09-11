@@ -66,6 +66,9 @@ public class StorjSnoHourService {
                 hour.setOverusedDiskSpace(last.getOverusedDiskSpace());
                 hour.setTotalUsedBandwidth(totalUsedBandwidth);
                 hour.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
+                hour.setIngressTotal(last.getIngressTotal());
+                hour.setEgressTotal(last.getEgressTotal());
+                hour.setUptimeAverage(last.getUptimeAverage());
 
                 storjSnoHourRepository.save(hour);
             }

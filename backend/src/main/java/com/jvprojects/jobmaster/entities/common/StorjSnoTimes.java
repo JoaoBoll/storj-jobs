@@ -14,4 +14,13 @@ public class StorjSnoTimes extends StorjSno {
     @Column(name = "total_consume_bandwidth_per_second")
     private Long totalConsumeBandwidthPerSecond;
 
+    @Column(name = "ingress_total")
+    private Long ingressTotal;
+
+    @Column(name = "egress_total")
+    private Long egressTotal;
+
+    @Column(name = "uptime_average")
+    private Double uptimeAverage;
+
 }

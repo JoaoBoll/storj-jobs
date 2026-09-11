@@ -67,6 +67,9 @@ public class StorjSnoMonthService {
                 month.setOverusedDiskSpace(last.getOverusedDiskSpace());
                 month.setTotalUsedBandwidth(totalUsedBandwidth);
                 month.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
+                month.setIngressTotal(last.getIngressTotal());
+                month.setEgressTotal(last.getEgressTotal());
+                month.setUptimeAverage(last.getUptimeAverage());
 
                 storjSnoMonthRepository.save(month);
             }

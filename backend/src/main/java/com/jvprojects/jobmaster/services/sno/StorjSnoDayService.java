@@ -66,6 +66,9 @@ public class StorjSnoDayService {
                 day.setOverusedDiskSpace(last.getOverusedDiskSpace());
                 day.setTotalUsedBandwidth(totalUsedBandwidth);
                 day.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
+                day.setIngressTotal(last.getIngressTotal());
+                day.setEgressTotal(last.getEgressTotal());
+                day.setUptimeAverage(last.getUptimeAverage());
 
                 storjSnoDayRepository.save(day);
             }

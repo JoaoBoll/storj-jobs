@@ -57,6 +57,9 @@ public class StorjSno30mService {
                 data.setOverusedDiskSpace(last.getOverusedDiskSpace());
                 data.setTotalUsedBandwidth(totalUsedBandwidth);
                 data.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
+                data.setIngressTotal(last.getIngressTotal());
+                data.setEgressTotal(last.getEgressTotal());
+                data.setUptimeAverage(last.getUptimeAverage());
 
                 storjSno30mRepository.save(data);
             }

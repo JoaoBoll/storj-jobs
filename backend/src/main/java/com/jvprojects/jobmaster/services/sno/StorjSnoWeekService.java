@@ -66,6 +66,9 @@ public class StorjSnoWeekService {
                 week.setOverusedDiskSpace(last.getOverusedDiskSpace());
                 week.setTotalUsedBandwidth(totalUsedBandwidth);
                 week.setTotalConsumeBandwidthPerSecond(totalConsumeBandwidthPerSecond);
+                week.setIngressTotal(last.getIngressTotal());
+                week.setEgressTotal(last.getEgressTotal());
+                week.setUptimeAverage(last.getUptimeAverage());
 
                 storjSnoWeekRepository.save(week);
             }

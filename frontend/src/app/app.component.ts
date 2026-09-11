@@ -1,11 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { SplineAreaChartComponent } from './shared/charts/spline-area-chart/spline-area-chart.component';
 import { ChartOptions } from './models/chart-options.model';
 
-type Unit = 'Auto' | 'KB' | 'MB' | 'GB' | 'TB';
-type ResolvedUnit = 'KB' | 'MB' | 'GB' | 'TB';
+type Unit = 'Auto' | 'KB' | 'MB' | 'GB';
+type ResolvedUnit = 'KB' | 'MB' | 'GB';
 type Interval = '5s' | '15s' | '30s' | '5m' | '15m' | '30m' | '1h' | '1d' | '1w' | '1mo';
 
 interface NodeResponse {
@@ -48,6 +48,7 @@ interface OverviewResponse {
 
 const RANGE_OPTIONS = [10, 20, 30, 60, 90] as const;
 type Range = typeof RANGE_OPTIONS[number];
+type ChartKey = 'storage' | 'trash' | 'bandwidth' | 'uptime';
 
 @Component({
   selector: 'app-root',
@@ -55,7 +56,7 @@ type Range = typeof RANGE_OPTIONS[number];
   styleUrls: ['./app.component.scss'],
   imports: [CommonModule, SplineAreaChartComponent]
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   public activeView = 'Overview';
   public lastSync = new Date();
   public toastMessage = '';
@@ -65,7 +66,7 @@ export class AppComponent {
   public readonly rangeOptions = RANGE_OPTIONS;
   public storageInterval: Interval = '5m';
   public trashInterval: Interval = '5m';
-  public bandwidthInterval: Interval = '1d';
+  public bandwidthInterval: Interval = '5m';
   public uptimeInterval: Interval = '5m';
   public storageRange: Range = 30;
   public trashRange: Range = 30;
@@ -94,20 +95,48 @@ export class AppComponent {
     { label: 'SNO month', cadence: 'Monthly', state: 'Scheduled' }
   ];
 
+  private readonly refreshTimers: Partial<Record<ChartKey, ReturnType<typeof setInterval>>> = {};
+  private readonly chartKeys: readonly ChartKey[] = ['storage', 'trash', 'bandwidth', 'uptime'];
+
   constructor(private readonly http: HttpClient) {
     this.loadNodes();
     this.loadOverview();
+    this.chartKeys.forEach(chart => this.scheduleAutoRefresh(chart));
+  }
+
+  ngOnDestroy(): void {
+    this.chartKeys.forEach(chart => this.clearAutoRefresh(chart));
+  }
+
+  private refreshMsFor(interval: Interval): number {
+    const cadence: Record<Interval, number> = {
+      '5s': 5_000, '15s': 15_000, '30s': 30_000,
+      '5m': 300_000, '15m': 900_000, '30m': 1_800_000,
+      '1h': 3_600_000, '1d': 60_000, '1w': 60_000, '1mo': 60_000
+    };
+    return cadence[interval];
+  }
+
+  private scheduleAutoRefresh(chart: ChartKey): void {
+    this.clearAutoRefresh(chart);
+    const ms = this.refreshMsFor(this.intervalFor(chart));
+    this.refreshTimers[chart] = setInterval(() => this.fetchOverview(chart, true), ms);
+  }
+
+  private clearAutoRefresh(chart: ChartKey): void {
+    const timer = this.refreshTimers[chart];
+    if (timer) clearInterval(timer);
   }
 
   public loadOverview(force = false): void {
-    (['storage', 'trash', 'bandwidth', 'uptime'] as const).forEach(chart => this.fetchOverview(chart, force));
+    this.chartKeys.forEach(chart => this.fetchOverview(chart, force));
   }
 
   private overviewKey(interval: Interval, range: Range): string {
     return `${interval}:${range}`;
   }
 
-  private fetchOverview(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime', force = false): void {
+  private fetchOverview(chart: ChartKey, force = false): void {
     const interval = this.intervalFor(chart);
     const range = this.rangeFor(chart);
     const key = this.overviewKey(interval, range);
@@ -125,15 +154,16 @@ export class AppComponent {
     });
   }
 
-  public selectChartInterval(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime', interval: Interval): void {
+  public selectChartInterval(chart: ChartKey, interval: Interval): void {
     if (chart === 'storage') this.storageInterval = interval;
     if (chart === 'trash') this.trashInterval = interval;
     if (chart === 'bandwidth') this.bandwidthInterval = interval;
     if (chart === 'uptime') this.uptimeInterval = interval;
     this.fetchOverview(chart);
+    this.scheduleAutoRefresh(chart);
   }
 
-  public selectChartRange(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime', range: Range): void {
+  public selectChartRange(chart: ChartKey, range: Range): void {
     if (chart === 'storage') this.storageRange = range;
     if (chart === 'trash') this.trashRange = range;
     if (chart === 'bandwidth') this.bandwidthRange = range;
@@ -141,14 +171,14 @@ export class AppComponent {
     this.fetchOverview(chart);
   }
 
-  private intervalFor(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): Interval {
+  private intervalFor(chart: ChartKey): Interval {
     if (chart === 'storage') return this.storageInterval;
     if (chart === 'trash') return this.trashInterval;
     if (chart === 'bandwidth') return this.bandwidthInterval;
     return this.uptimeInterval;
   }
 
-  private rangeFor(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): Range {
+  private rangeFor(chart: ChartKey): Range {
     if (chart === 'storage') return this.storageRange;
     if (chart === 'trash') return this.trashRange;
     if (chart === 'bandwidth') return this.bandwidthRange;
@@ -166,7 +196,7 @@ export class AppComponent {
     return this.overviewData.get(this.overviewKey(interval, range)) ?? { interval, points: range, data: [] };
   }
 
-  private updateChart(chart: 'storage' | 'trash' | 'bandwidth' | 'uptime'): void {
+  private updateChart(chart: ChartKey): void {
     if (chart === 'storage') this.updateStorageChart();
     else if (chart === 'trash') this.updateTrashChart();
     else if (chart === 'bandwidth') this.updateBandwidthChart();
@@ -320,14 +350,13 @@ export class AppComponent {
 
   public toUnit(bytes: number | null, unit: ResolvedUnit): number {
     if (bytes === null || bytes === undefined) return 0;
-    const divisor = { KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 }[unit];
+    const divisor = { KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 }[unit];
     return Number((bytes / divisor).toFixed(2));
   }
 
   private resolveUnit(unit: Unit, referenceBytes: number): ResolvedUnit {
     if (unit !== 'Auto') return unit;
     const abs = Math.abs(referenceBytes);
-    if (abs >= 1024 ** 4) return 'TB';
     if (abs >= 1024 ** 3) return 'GB';
     if (abs >= 1024 ** 2) return 'MB';
     return 'KB';

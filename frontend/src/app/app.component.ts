@@ -288,6 +288,19 @@ export class AppComponent implements OnDestroy {
     this.trashDeltaText = this.formatDelta(displayValues, unit);
   }
 
+  // Ingress/egress themselves only refresh once a minute (satellite poll), so below 1m their
+  // real per-bucket delta is 0 for ~11 out of every 12 buckets. usedBandwidth is sampled fresh
+  // from the node every 5s, so for these intervals we redistribute ITS real delta between
+  // ingress/egress using the last known ingress:egress ratio, instead of a flat line.
+  private isSubMinuteInterval(interval: Interval): boolean {
+    return interval === '5s' || interval === '15s' || interval === '30s';
+  }
+
+  private ingressShare(ingressTotal: number, egressTotal: number): number {
+    const sum = ingressTotal + egressTotal;
+    return sum > 0 ? ingressTotal / sum : 0.5;
+  }
+
   private updateBandwidthChart(): void {
     const data = this.overviewFor(this.bandwidthInterval, this.bandwidthRange);
     const rawIngress = data.data.map(point => point.ingressTotal ?? 0);
@@ -296,8 +309,17 @@ export class AppComponent implements OnDestroy {
     const ingressValues = rawIngress.map(bytes => this.toUnit(bytes, unit));
     const egressValues = rawEgress.map(bytes => this.toUnit(bytes, unit));
     // Use all points for delta calculation
-    const ingressDeltas = this.toBandwidthDeltaSeries(ingressValues);
-    const egressDeltas = this.toBandwidthDeltaSeries(egressValues).map(v => -v); // Invert egress
+    let ingressDeltas = this.toBandwidthDeltaSeries(ingressValues);
+    let egressDeltas = this.toBandwidthDeltaSeries(egressValues);
+    const subMinute = this.isSubMinuteInterval(this.bandwidthInterval);
+    if (subMinute) {
+      const rawTotal = data.data.map(point => point.totalBandwidthUsed ?? 0);
+      const totalValues = rawTotal.map(bytes => this.toUnit(bytes, unit));
+      const totalDeltas = this.toBandwidthDeltaSeries(totalValues);
+      ingressDeltas = totalDeltas.map((delta, index) => delta * this.ingressShare(rawIngress[index], rawEgress[index]));
+      egressDeltas = totalDeltas.map((delta, index) => delta * (1 - this.ingressShare(rawIngress[index], rawEgress[index])));
+    }
+    egressDeltas = egressDeltas.map(v => -v); // Invert egress
     // Display only the last N points
     const displayIngressDeltas = ingressDeltas.slice(-this.bandwidthRange);
     const displayEgressDeltas = egressDeltas.slice(-this.bandwidthRange);
@@ -321,8 +343,17 @@ export class AppComponent implements OnDestroy {
     this.bandwidthSummary = `Total Ingress: ${totalIngress} ${unit} · Total Egress: ${totalEgress} ${unit}`;
     this.bandwidthIngressTotal = `${totalIngress} ${unit}`;
     this.bandwidthEgressTotal = `${totalEgress} ${unit}`;
-    this.bandwidthIngressDeltaText = this.formatDelta(displayIngressValues, unit);
-    this.bandwidthEgressDeltaText = this.formatDelta(displayEgressValues, unit);
+    if (subMinute) {
+      const lastIngressDelta = displayIngressDeltas.length ? displayIngressDeltas[displayIngressDeltas.length - 1] : 0;
+      const lastEgressDelta = displayEgressDeltas.length ? -displayEgressDeltas[displayEgressDeltas.length - 1] : 0;
+      const prevIngress = displayIngressValues.length > 1 ? displayIngressValues[displayIngressValues.length - 2] : 0;
+      const prevEgress = displayEgressValues.length > 1 ? displayEgressValues[displayEgressValues.length - 2] : 0;
+      this.bandwidthIngressDeltaText = this.formatDeltaValue(lastIngressDelta, prevIngress, unit);
+      this.bandwidthEgressDeltaText = this.formatDeltaValue(lastEgressDelta, prevEgress, unit);
+    } else {
+      this.bandwidthIngressDeltaText = this.formatDelta(displayIngressValues, unit);
+      this.bandwidthEgressDeltaText = this.formatDelta(displayEgressValues, unit);
+    }
   }
 
   private toDeltaSeries(values: number[]): number[] {
@@ -337,8 +368,11 @@ export class AppComponent implements OnDestroy {
     if (values.length < 2) return `+${this.formatNumber(0)} ${unit} (+0.00%)`;
     const previous = values[values.length - 2];
     const current = values[values.length - 1];
-    const delta = current - previous;
-    const percent = previous ? (delta / previous) * 100 : 0;
+    return this.formatDeltaValue(current - previous, previous, unit);
+  }
+
+  private formatDeltaValue(delta: number, base: number, unit: string): string {
+    const percent = base ? (delta / base) * 100 : 0;
     const sign = delta >= 0 ? '+' : '';
     return `${sign}${this.formatNumber(delta)} ${unit} (${sign}${percent.toFixed(2)}%)`;
   }

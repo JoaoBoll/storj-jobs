@@ -12,6 +12,7 @@ import com.jvprojects.jobmaster.repositories.sno.StorjSnoSecondRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -43,6 +44,7 @@ public class StorjSnoSecondService {
         this.urls = configurations.getUrls();
     }
 
+    @Transactional
     public void runJob() {
 
         List<StorjSnoDto> items = fetchStorjNodes();
@@ -82,27 +84,35 @@ public class StorjSnoSecondService {
         log.info("Current time in UTC: " + now);
 
         for (StorjSnoDto item : itens) {
-            StorjSnoSecond second = new StorjSnoSecond();
-
-            second.setCreatedAt(now);
-            if (item.getNodeId() != null) {
-                second.setNodeId(item.getNodeId());
+            try {
+                saveOne(item, now);
+            } catch (Exception e) {
+                log.error("Failed to save SNO second snapshot for {}: {}", item.getUrl(), e.getMessage(), e);
             }
-
-            if (item.getDiskSpace() != null) {
-                second.setUsedDiskSpace(item.getDiskSpace().getUsed());
-                second.setTrashDiskSpace(item.getDiskSpace().getTrash());
-                second.setOverusedDiskSpace(item.getDiskSpace().getOverused());
-            }
-
-            if (item.getBandwidth() != null) {
-                second.setUsedBandwidth(item.getBandwidth().getUsed());
-            }
-
-            applySatelliteSnapshot(second);
-
-            storjSnoSecondRepository.save(second);
         }
+    }
+
+    private void saveOne(StorjSnoDto item, OffsetDateTime now) {
+        StorjSnoSecond second = new StorjSnoSecond();
+
+        second.setCreatedAt(now);
+        if (item.getNodeId() != null) {
+            second.setNodeId(item.getNodeId());
+        }
+
+        if (item.getDiskSpace() != null) {
+            second.setUsedDiskSpace(item.getDiskSpace().getUsed());
+            second.setTrashDiskSpace(item.getDiskSpace().getTrash());
+            second.setOverusedDiskSpace(item.getDiskSpace().getOverused());
+        }
+
+        if (item.getBandwidth() != null) {
+            second.setUsedBandwidth(item.getBandwidth().getUsed());
+        }
+
+        applySatelliteSnapshot(second);
+
+        storjSnoSecondRepository.save(second);
     }
 
     /**
@@ -110,6 +120,8 @@ public class StorjSnoSecondService {
      * daily granularity, so every 5s tick just re-reads the node's latest known snapshot -
      * this keeps ingress/egress/uptime living on the same row as everything else, and lets
      * the whole StorjSno cascade (minute -> month) carry them forward like any other field.
+     * Relies on runJob()'s @Transactional to keep the session open for these lazy collections
+     * (this whole chain runs on a Quartz job thread, with no web request to piggy-back on).
      */
     private void applySatelliteSnapshot(StorjSnoSecond second) {
         if (second.getNodeId() == null) return;

@@ -27,6 +27,12 @@ interface NodeCard {
   accent: string;
 }
 
+interface OverviewResponse {
+  currentUsedBandwidth: number;
+  previousUsedBandwidth: number;
+  bandwidthDelta: number;
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -38,6 +44,11 @@ export class AppComponent {
   public activeView = 'Nodes';
   public lastSync = new Date();
   public toastMessage = '';
+  public overview: OverviewResponse = {
+    currentUsedBandwidth: 0,
+    previousUsedBandwidth: 0,
+    bandwidthDelta: 0
+  };
   public chartOptions: ChartOptions;
 
   public nodes: NodeCard[] = [];
@@ -74,6 +85,22 @@ export class AppComponent {
     }
 
     this.loadNodes();
+    this.loadOverview();
+  }
+
+  public loadOverview(): void {
+    this.http.get<OverviewResponse>('/api/job/overview').subscribe({
+      next: (overview) => {
+        this.overview = overview;
+        this.chartOptions.series = [
+          { name: 'Bandwidth total', data: [overview.previousUsedBandwidth, overview.currentUsedBandwidth] }
+        ];
+        this.chartOptions.xaxis = { ...this.chartOptions.xaxis, categories: ['Intervalo anterior', 'Intervalo atual'] };
+      },
+      error: () => {
+        this.toastMessage = 'Não foi possível carregar o overview';
+      }
+    });
   }
 
   public loadNodes(): void {
@@ -111,6 +138,11 @@ export class AppComponent {
     const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const unitIndex = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, unitIndex)).toFixed(1)} ${units[unitIndex]}`;
+  }
+
+  public formatDelta(bytes: number): string {
+    const sign = bytes > 0 ? '+' : '';
+    return `${sign}${this.formatBytes(bytes)}`;
   }
 
   public diskUsage(node: NodeCard): number {

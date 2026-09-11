@@ -1,7 +1,9 @@
 package com.jvprojects.jobmaster.resources;
 
 import com.jvprojects.jobmaster.dto.StorjNodeResponse;
+import com.jvprojects.jobmaster.dto.OverviewResponse;
 import com.jvprojects.jobmaster.entities.StorjNode;
+import com.jvprojects.jobmaster.entities.StorjSnoSecond;
 import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
 import com.jvprojects.jobmaster.repositories.sno.StorjSnoSecondRepository;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/job")
@@ -29,6 +33,26 @@ public class JobController {
         return storjNodeRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @GetMapping("/overview")
+    public OverviewResponse overview() {
+        Map<String, List<StorjSnoSecond>> byNode = storjSnoSecondRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .filter(item -> item.getNodeId() != null)
+                .collect(Collectors.groupingBy(StorjSnoSecond::getNodeId));
+
+        long current = 0;
+        long previous = 0;
+        for (List<StorjSnoSecond> records : byNode.values()) {
+            if (!records.isEmpty() && records.get(0).getUsedBandwidth() != null) {
+                current += records.get(0).getUsedBandwidth();
+            }
+            if (records.size() > 1 && records.get(1).getUsedBandwidth() != null) {
+                previous += records.get(1).getUsedBandwidth();
+            }
+        }
+        return new OverviewResponse(current, previous, current - previous);
     }
 
     private StorjNodeResponse toResponse(StorjNode node) {

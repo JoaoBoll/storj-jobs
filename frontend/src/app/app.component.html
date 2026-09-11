@@ -31,19 +31,23 @@
 		<header class="topbar">
 			<div>
 				<p class="eyebrow">Infrastructure / live view</p>
-				<h1>Nodes</h1>
+				<h1>{{ activeView }}</h1>
 			</div>
 			<div class="topbar-actions">
 				<span class="sync-time">Last sync {{ lastSync | date:'HH:mm:ss' }}</span>
-				<button class="icon-button" type="button" title="Refresh data" (click)="loadNodes()">&#8635;</button>
+				<button class="icon-button" type="button" title="Refresh data" (click)="loadNodes(); loadOverview()">&#8635;</button>
 				<div class="avatar">JM</div>
 			</div>
 		</header>
 
 		<section class="hero-row">
 			<div>
-				<h2>Registered Storj nodes.</h2>
-				<p>Each card reflects the latest information stored for an individual node.</p>
+				<h2 *ngIf="activeView === 'Nodes'">Registered Storj nodes.</h2>
+				<p *ngIf="activeView === 'Nodes'">Each card reflects the latest information stored for an individual node.</p>
+				<h2 *ngIf="activeView === 'Overview'">Fleet overview.</h2>
+				<p *ngIf="activeView === 'Overview'">Bandwidth is compared with the previous collection interval.</p>
+				<h2 *ngIf="activeView === 'Jobs'">Scheduled collection.</h2>
+				<p *ngIf="activeView === 'Jobs'">Jobs are managed automatically by Quartz.</p>
 			</div>
 			<div class="hero-status"><span class="pulse"></span> All systems operational</div>
 		</section>
@@ -61,8 +65,8 @@
 			</article>
 			<article class="metric-card accent-blue">
 				<div class="metric-heading"><span>Bandwidth</span><span class="metric-symbol">&lt;&gt;</span></div>
-				<strong>87.5 <small>TB</small></strong>
-				<div class="metric-foot"><span class="positive">+8.1%</span><span>this month</span></div>
+				<strong>{{ formatBytes(overview.currentUsedBandwidth) }} </strong>
+				<div class="metric-foot"><span [class.positive]="overview.bandwidthDelta >= 0" [class.negative]="overview.bandwidthDelta < 0">{{ formatDelta(overview.bandwidthDelta) }}</span><span>vs previous interval</span></div>
 			</article>
 			<article class="metric-card accent-amber">
 				<div class="metric-heading"><span>Collection health</span><span class="metric-symbol">*</span></div>
@@ -87,8 +91,8 @@
 			</article>
 		</section>
 
-		<section class="section-heading"><div><p class="eyebrow">Nodes</p><h3>Registered Storj nodes</h3></div><span class="job-summary">{{ nodes.length }} registered</span></section>
-		<section class="node-grid">
+		<section class="section-heading" *ngIf="activeView === 'Nodes'"><div><p class="eyebrow">Nodes</p><h3>Registered Storj nodes</h3></div><span class="job-summary">{{ nodes.length }} registered</span></section>
+		<section class="node-grid" *ngIf="activeView === 'Nodes'">
 			<article class="node-card" *ngFor="let node of nodes">
 				<div class="node-card-top"><div class="node-avatar" [ngClass]="node.accent">S</div><div><h4>{{ node.name }}</h4><span class="node-id">{{ node.id }}</span></div><span class="node-status" [class.degraded-status]="node.status === 'Degraded'"><i></i>{{ node.status }}</span></div>
 				<div class="node-url">{{ node.url }} <span>...</span></div>

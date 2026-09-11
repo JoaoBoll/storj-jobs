@@ -2,7 +2,11 @@ package com.jvprojects.jobmaster.resources;
 
 import com.jvprojects.jobmaster.dto.StorjNodeResponse;
 import com.jvprojects.jobmaster.dto.OverviewResponse;
+import com.jvprojects.jobmaster.entities.Audits;
+import com.jvprojects.jobmaster.entities.BandwidthDaily;
+import com.jvprojects.jobmaster.entities.StorageDaily;
 import com.jvprojects.jobmaster.entities.StorjNode;
+import com.jvprojects.jobmaster.entities.StorjSatellites;
 import com.jvprojects.jobmaster.entities.StorjSnoSecond;
 import com.jvprojects.jobmaster.repositories.StorjNodeRepository;
 import com.jvprojects.jobmaster.repositories.sno.StorjSnoSecondRepository;
@@ -12,9 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 import java.util.ArrayList;
-import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.util.Comparator;
 
 @RestController
 @RequestMapping("/job")
@@ -38,37 +42,61 @@ public class JobController {
 
     @GetMapping("/overview")
     public OverviewResponse overview() {
-        Map<String, List<StorjSnoSecond>> byNode = storjSnoSecondRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .filter(item -> item.getNodeId() != null)
-                .collect(Collectors.groupingBy(StorjSnoSecond::getNodeId));
-
-        long current = 0;
-        long previous = 0;
         List<OverviewResponse.NodeOverviewResponse> nodeSummaries = new ArrayList<>();
-        for (List<StorjSnoSecond> records : byNode.values()) {
-            StorjSnoSecond latest = records.get(0);
-            Long usedDiskSpace = latest.getUsedDiskSpace();
-                StorjNode registeredNode = storjNodeRepository.findByNodeId(latest.getNodeId());
-                Long availableDiskSpace = registeredNode == null ? null : registeredNode.getAvailableDiskSpace();
-            Long totalDiskSpace = usedDiskSpace == null || availableDiskSpace == null
-                ? null
-                : usedDiskSpace + availableDiskSpace;
+        List<StorjSnoSecond> allSnoRecords = storjSnoSecondRepository.findAllByOrderByCreatedAtDesc();
+        for (StorjNode node : storjNodeRepository.findAll()) {
+            StorjSatellites satellites = node.getStorjSatellites();
+            List<StorjSnoSecond> records = allSnoRecords.stream()
+                    .filter(item -> node.getNodeId().equals(item.getNodeId()))
+                    .toList();
+            List<StorageDaily> storage = satellites == null || satellites.getStorageDaily() == null
+                    ? List.of()
+                    : satellites.getStorageDaily().stream()
+                    .sorted(Comparator.comparing(StorageDaily::getIntervalStart, Comparator.nullsLast(Comparator.naturalOrder())))
+                    .toList();
+            StorjSnoSecond latestSno = records.isEmpty() ? null : records.get(0);
+            StorjSnoSecond firstSno = records.isEmpty() ? null : records.get(records.size() - 1);
+            StorageDaily firstStorage = storage.isEmpty() ? null : storage.get(0);
+            StorageDaily latestStorage = storage.isEmpty() ? null : storage.get(storage.size() - 1);
             nodeSummaries.add(new OverviewResponse.NodeOverviewResponse(
-                latest.getNodeId(),
-                latest.getUsedBandwidth(),
-                usedDiskSpace,
-                availableDiskSpace,
-                totalDiskSpace
+                node.getNodeId(),
+                latestStorage == null ? null : latestStorage.getAtRestTotalBytes(),
+                firstStorage == null ? null : firstStorage.getAtRestTotalBytes(),
+                latestSno == null ? null : latestSno.getTrashDiskSpace(),
+                firstSno == null ? null : firstSno.getTrashDiskSpace(),
+                totalIngress(satellites),
+                totalEgress(satellites),
+                averageUptime(satellites)
             ));
-            if (!records.isEmpty() && records.get(0).getUsedBandwidth() != null) {
-                current += records.get(0).getUsedBandwidth();
-            }
-            if (records.size() > 1 && records.get(1).getUsedBandwidth() != null) {
-                previous += records.get(1).getUsedBandwidth();
-            }
         }
-        return new OverviewResponse(current, previous, current - previous, nodeSummaries);
+        return new OverviewResponse(nodeSummaries);
+    }
+
+    private Long totalIngress(StorjSatellites satellites) {
+        if (satellites == null || satellites.getBandwidthDaily() == null) return null;
+        return satellites.getBandwidthDaily().stream()
+                .mapToLong(item -> value(item.getIngressRepair()) + value(item.getIngressUsage()))
+                .sum();
+    }
+
+    private Long totalEgress(StorjSatellites satellites) {
+        if (satellites == null || satellites.getBandwidthDaily() == null) return null;
+        return satellites.getBandwidthDaily().stream()
+                .mapToLong(item -> value(item.getEgressRepair()) + value(item.getEgressAudit()) + value(item.getEgressUsage()))
+                .sum();
+    }
+
+    private double averageUptime(StorjSatellites satellites) {
+        if (satellites == null || satellites.getAudits() == null) return 0;
+        List<BigDecimal> scores = satellites.getAudits().stream()
+                .map(Audits::getOnlineScore)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        return scores.isEmpty() ? 0 : scores.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(0) * 100;
+    }
+
+    private long value(Long value) {
+        return value == null ? 0 : value;
     }
 
     private StorjNodeResponse toResponse(StorjNode node) {

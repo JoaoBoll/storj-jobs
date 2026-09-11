@@ -28,18 +28,18 @@ interface NodeCard {
 }
 
 interface OverviewResponse {
-  currentUsedBandwidth: number;
-  previousUsedBandwidth: number;
-  bandwidthDelta: number;
   nodes: OverviewNode[];
 }
 
 interface OverviewNode {
   nodeId: string;
-  usedBandwidth: number | null;
-  usedDiskSpace: number | null;
-  availableDiskSpace: number | null;
-  totalDiskSpace: number | null;
+  storageUsed: number | null;
+  storageFirstInterval: number | null;
+  trashUsed: number | null;
+  trashFirstInterval: number | null;
+  ingressTotal: number | null;
+  egressTotal: number | null;
+  uptimePercent: number | null;
 }
 
 @Component({
@@ -54,13 +54,11 @@ export class AppComponent {
   public lastSync = new Date();
   public toastMessage = '';
   public displayUnit: 'MB' | 'GB' | 'TB' = 'GB';
-  public overview: OverviewResponse = {
-    currentUsedBandwidth: 0,
-    previousUsedBandwidth: 0,
-    bandwidthDelta: 0,
-    nodes: []
-  };
-  public chartOptions: ChartOptions;
+  public overview: OverviewResponse = { nodes: [] };
+  public storageChart!: ChartOptions;
+  public trashChart!: ChartOptions;
+  public bandwidthChart!: ChartOptions;
+  public uptimeChart!: ChartOptions;
 
   public nodes: NodeCard[] = [];
 
@@ -74,26 +72,10 @@ export class AppComponent {
   ];
 
   constructor(private readonly http: HttpClient) {
-    this.chartOptions = {
-      series: [
-          { name: "Used bandwidth", data: [] },
-          { name: "Storage usage", data: [] }
-      ],
-      chart: { height: 310, type: "area", toolbar: { show: false }, background: 'transparent' },
-      dataLabels: { enabled: false },
-      colors: ['#c7f36b', '#5bd6e8'],
-      stroke: { curve: "smooth", width: 2 },
-      xaxis: {
-          categories: [],
-        labels: { style: { colors: '#6f7b83' } },
-        axisBorder: { show: false },
-        axisTicks: { show: false }
-      },
-      yaxis: { labels: { style: { colors: '#6f7b83' } } },
-      grid: { borderColor: '#26323a', strokeDashArray: 4 },
-      legend: { show: false },
-      tooltip: { theme: 'dark' }
-    }
+    this.storageChart = this.createChart('#c7f36b', 'Storage used');
+    this.trashChart = this.createChart('#f4bb61', 'Trash');
+    this.bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
+    this.uptimeChart = this.createChart('#83a9ff', 'Uptime %');
 
     this.loadNodes();
     this.loadOverview();
@@ -103,7 +85,7 @@ export class AppComponent {
     this.http.get<OverviewResponse>('/api/job/overview').subscribe({
       next: (overview) => {
         this.overview = overview;
-        this.updateOverviewChart();
+        this.updateOverviewCharts();
       },
       error: () => {
         this.toastMessage = 'Não foi possível carregar o overview';
@@ -111,21 +93,42 @@ export class AppComponent {
     });
   }
 
-  public updateOverviewChart(): void {
-    this.chartOptions.series = [
-      {
-        name: 'Used bandwidth',
-        data: this.overview.nodes.map(node => this.toUnit(node.usedBandwidth))
-      },
-      {
-        name: 'Storage usage',
-        data: this.overview.nodes.map(node => this.toUnit(node.usedDiskSpace))
-      }
-    ];
-    this.chartOptions.xaxis = {
-      ...this.chartOptions.xaxis,
-      categories: this.overview.nodes.map(node => node.nodeId.slice(0, 8))
+  public createChart(color: string, name: string): ChartOptions {
+    return {
+      series: [{ name, data: [] }],
+      chart: { height: 260, type: 'bar', toolbar: { show: false }, background: 'transparent' },
+      dataLabels: { enabled: false }, colors: [color], stroke: { width: 2 },
+      xaxis: { categories: [], labels: { style: { colors: '#6f7b83' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+      yaxis: { labels: { style: { colors: '#6f7b83' } } }, grid: { borderColor: '#26323a', strokeDashArray: 4 }, legend: { show: false }, tooltip: { theme: 'dark' }
     };
+  }
+
+  public updateOverviewCharts(): void {
+    const categories = this.overview.nodes.map(node => node.nodeId.slice(0, 8));
+    this.storageChart = { ...this.storageChart, series: [{ name: 'Storage used', data: this.overview.nodes.map(node => this.toUnit(node.storageUsed)) }], xaxis: { ...this.storageChart.xaxis, categories } };
+    this.trashChart = { ...this.trashChart, series: [{ name: 'Trash', data: this.overview.nodes.map(node => this.toUnit(node.trashUsed)) }], xaxis: { ...this.trashChart.xaxis, categories } };
+    this.bandwidthChart = { ...this.bandwidthChart, series: [{ name: 'Ingress', data: this.overview.nodes.map(node => this.toUnit(node.ingressTotal)) }, { name: 'Egress', data: this.overview.nodes.map(node => this.toUnit(node.egressTotal)) }], xaxis: { ...this.bandwidthChart.xaxis, categories } };
+    this.uptimeChart = { ...this.uptimeChart, series: [{ name: 'Uptime %', data: this.overview.nodes.map(node => node.uptimePercent ?? 0) }], xaxis: { ...this.uptimeChart.xaxis, categories } };
+  }
+
+  public averageUptime(): number {
+    if (!this.overview.nodes.length) return 0;
+    return this.overview.nodes.reduce((total, node) => total + (node.uptimePercent ?? 0), 0) / this.overview.nodes.length;
+  }
+
+  public percentOfFirst(current: number | null, first: number | null): number {
+    if (current === null || first === null || first === 0) return 0;
+    return (current / Math.abs(first)) * 100;
+  }
+
+  public averageStorageChange(): number {
+    if (!this.overview.nodes.length) return 0;
+    return this.overview.nodes.reduce((total, node) => total + this.percentOfFirst(node.storageUsed, node.storageFirstInterval), 0) / this.overview.nodes.length;
+  }
+
+  public averageTrashChange(): number {
+    if (!this.overview.nodes.length) return 0;
+    return this.overview.nodes.reduce((total, node) => total + this.percentOfFirst(node.trashUsed, node.trashFirstInterval), 0) / this.overview.nodes.length;
   }
 
   public toUnit(bytes: number | null): number {
@@ -138,7 +141,7 @@ export class AppComponent {
 
   public selectUnit(unit: 'MB' | 'GB' | 'TB'): void {
     this.displayUnit = unit;
-    this.updateOverviewChart();
+    this.updateOverviewCharts();
   }
 
   public loadNodes(): void {

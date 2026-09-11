@@ -59,36 +59,27 @@
 				<div class="metric-foot"><span class="positive">Live</span><span>registered nodes</span></div>
 			</article>
 			<article class="metric-card accent-cyan">
-				<div class="metric-heading"><span>Storage used</span><span class="metric-symbol">#</span></div>
-				<strong>58.4 <small>TB</small></strong>
-				<div class="metric-foot"><span class="positive">+4.8%</span><span>this month</span></div>
+				<div class="metric-heading"><span>Storage usage</span><span class="metric-symbol">#</span></div>
+				<strong>{{ overview.nodes.length }} <small>nodes</small></strong>
+				<div class="metric-foot"><span class="positive">Live data</span><span>latest interval</span></div>
 			</article>
 			<article class="metric-card accent-blue">
-				<div class="metric-heading"><span>Bandwidth</span><span class="metric-symbol">&lt;&gt;</span></div>
-				<strong>{{ formatValue(overview.currentUsedBandwidth) }}</strong>
-				<div class="metric-foot"><span [class.positive]="overview.bandwidthDelta >= 0" [class.negative]="overview.bandwidthDelta < 0">{{ formatDelta(overview.bandwidthDelta) }}</span><span>vs previous interval</span></div>
+				<div class="metric-heading"><span>Uptime average</span><span class="metric-symbol">%</span></div>
+				<strong>{{ averageUptime() | number:'1.2-2' }}<small>%</small></strong>
+				<div class="metric-foot"><span class="positive">All satellites</span><span>per node</span></div>
 			</article>
 			<article class="metric-card accent-amber">
-				<div class="metric-heading"><span>Collection health</span><span class="metric-symbol">*</span></div>
-				<strong>99.7 <small>%</small></strong>
-				<div class="metric-foot"><span class="positive">Stable</span><span>last 24 hours</span></div>
+				<div class="metric-heading"><span>Unit</span><span class="metric-symbol">#</span></div>
+				<strong>{{ displayUnit }}</strong>
+				<div class="metric-foot"><span class="positive">Selected</span><span>for storage charts</span></div>
 			</article>
 		</section>
 
-		<section class="content-grid" *ngIf="activeView === 'Overview'">
-			<article class="panel chart-panel">
-				<div class="panel-header">
-					<div><p class="eyebrow">Fleet performance</p><h3>Traffic & storage</h3></div>
-					<div class="chart-controls"><select [value]="displayUnit" (change)="selectUnit($any($event.target).value)"><option value="MB">MB</option><option value="GB">GB</option><option value="TB">TB</option></select><div class="legend"><span><i class="legend-dot lime"></i>Used bandwidth</span><span><i class="legend-dot cyan"></i>Storage usage</span></div></div>
-				</div>
-				<app-spline-area-chart [chartOptions]="chartOptions"></app-spline-area-chart>
-			</article>
-
-			<article class="panel health-panel">
-				<div class="panel-header"><div><p class="eyebrow">Fleet status</p><h3>Node health</h3></div><span class="health-score">99.7%</span></div>
-				<div class="health-ring"><div><strong>{{ onlineNodes }}</strong><span>nodes online</span></div></div>
-				<div class="health-list"><div><span class="status-dot online"></span><span>Online</span><strong>{{ onlineNodes }}</strong></div><div><span class="status-dot degraded"></span><span>Disabled</span><strong>{{ nodes.length - onlineNodes }}</strong></div></div>
-			</article>
+		<section class="overview-charts" *ngIf="activeView === 'Overview'">
+			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Storage</p><h3>Total storage used</h3></div><div><select [value]="displayUnit" (change)="selectUnit($any($event.target).value)"><option value="MB">MB</option><option value="GB">GB</option><option value="TB">TB</option></select><span class="chart-caption">{{ averageStorageChange() | number:'1.1-1' }}% of first</span></div></div><app-spline-area-chart [chartOptions]="storageChart"></app-spline-area-chart></article>
+			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Trash</p><h3>Trash usage</h3></div><span class="chart-caption">{{ averageTrashChange() | number:'1.1-1' }}% of first</span></div><app-spline-area-chart [chartOptions]="trashChart"></app-spline-area-chart></article>
+			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Bandwidth</p><h3>Ingress & egress total</h3></div><span class="chart-caption">{{ displayUnit }}</span></div><app-spline-area-chart [chartOptions]="bandwidthChart"></app-spline-area-chart></article>
+			<article class="panel chart-panel"><div class="panel-header"><div><p class="eyebrow">Availability</p><h3>Average satellite uptime</h3></div><span class="chart-caption">Percent</span></div><app-spline-area-chart [chartOptions]="uptimeChart"></app-spline-area-chart></article>
 		</section>
 
 		<section class="section-heading" *ngIf="activeView === 'Nodes'"><div><p class="eyebrow">Nodes</p><h3>Registered Storj nodes</h3></div><span class="job-summary">{{ nodes.length }} registered</span></section>

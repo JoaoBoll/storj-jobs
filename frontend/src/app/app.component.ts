@@ -50,6 +50,9 @@ const RANGE_OPTIONS = [10, 20, 30, 60, 90] as const;
 type Range = typeof RANGE_OPTIONS[number];
 type ChartKey = 'storage' | 'trash' | 'bandwidth' | 'uptime';
 
+const AUTO_REFRESH_OPTIONS = [0, 5, 15, 30, 60, 300, 900] as const;
+type AutoRefreshSeconds = typeof AUTO_REFRESH_OPTIONS[number];
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -74,11 +77,16 @@ export class AppComponent implements OnDestroy {
   public uptimeRange: Range = 30;
   private readonly overviewData = new Map<string, OverviewResponse>();
   public storageSummary = '';
+  public storageDeltaText = '';
   public trashSummary = '';
+  public trashDeltaText = '';
   public bandwidthSummary = '';
   public bandwidthIngressTotal = '';
   public bandwidthEgressTotal = '';
+  public bandwidthIngressDeltaText = '';
+  public bandwidthEgressDeltaText = '';
   public uptimeSummary = '';
+  public uptimeDeltaText = '';
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
   public bandwidthChart = this.createChart('#5bd6e8', 'Bandwidth');
@@ -95,37 +103,34 @@ export class AppComponent implements OnDestroy {
     { label: 'SNO month', cadence: 'Monthly', state: 'Scheduled' }
   ];
 
-  private readonly refreshTimers: Partial<Record<ChartKey, ReturnType<typeof setInterval>>> = {};
   private readonly chartKeys: readonly ChartKey[] = ['storage', 'trash', 'bandwidth', 'uptime'];
+  public readonly autoRefreshOptions = AUTO_REFRESH_OPTIONS;
+  public autoRefreshSeconds: AutoRefreshSeconds = 30;
+  private autoRefreshTimer?: ReturnType<typeof setInterval>;
 
   constructor(private readonly http: HttpClient) {
     this.loadNodes();
     this.loadOverview();
-    this.chartKeys.forEach(chart => this.scheduleAutoRefresh(chart));
+    this.scheduleGlobalAutoRefresh();
   }
 
   ngOnDestroy(): void {
-    this.chartKeys.forEach(chart => this.clearAutoRefresh(chart));
+    this.clearGlobalAutoRefresh();
   }
 
-  private refreshMsFor(interval: Interval): number {
-    const cadence: Record<Interval, number> = {
-      '5s': 5_000, '15s': 15_000, '30s': 30_000,
-      '5m': 300_000, '15m': 900_000, '30m': 1_800_000,
-      '1h': 3_600_000, '1d': 60_000, '1w': 60_000, '1mo': 60_000
-    };
-    return cadence[interval];
+  public selectAutoRefresh(seconds: AutoRefreshSeconds): void {
+    this.autoRefreshSeconds = seconds;
+    this.scheduleGlobalAutoRefresh();
   }
 
-  private scheduleAutoRefresh(chart: ChartKey): void {
-    this.clearAutoRefresh(chart);
-    const ms = this.refreshMsFor(this.intervalFor(chart));
-    this.refreshTimers[chart] = setInterval(() => this.fetchOverview(chart, true), ms);
+  private scheduleGlobalAutoRefresh(): void {
+    this.clearGlobalAutoRefresh();
+    if (this.autoRefreshSeconds <= 0) return;
+    this.autoRefreshTimer = setInterval(() => this.loadOverview(true), this.autoRefreshSeconds * 1000);
   }
 
-  private clearAutoRefresh(chart: ChartKey): void {
-    const timer = this.refreshTimers[chart];
-    if (timer) clearInterval(timer);
+  private clearGlobalAutoRefresh(): void {
+    if (this.autoRefreshTimer) clearInterval(this.autoRefreshTimer);
   }
 
   public loadOverview(force = false): void {
@@ -160,7 +165,6 @@ export class AppComponent implements OnDestroy {
     if (chart === 'bandwidth') this.bandwidthInterval = interval;
     if (chart === 'uptime') this.uptimeInterval = interval;
     this.fetchOverview(chart);
-    this.scheduleAutoRefresh(chart);
   }
 
   public selectChartRange(chart: ChartKey, range: Range): void {
@@ -217,6 +221,7 @@ export class AppComponent implements OnDestroy {
     };
     const latest = values.length ? values[values.length - 1] : 0;
     this.storageSummary = `${this.formatNumber(latest)} ${unit}`;
+    this.storageDeltaText = this.formatDelta(values, unit);
   }
 
   private updateTrashChart(): void {
@@ -233,6 +238,7 @@ export class AppComponent implements OnDestroy {
     };
     const latest = values.length ? values[values.length - 1] : 0;
     this.trashSummary = `${this.formatNumber(latest)} ${unit}`;
+    this.trashDeltaText = this.formatDelta(values, unit);
   }
 
   private updateBandwidthChart(): void {
@@ -253,8 +259,8 @@ export class AppComponent implements OnDestroy {
       ],
       xaxis: { ...this.bandwidthChart.xaxis, categories: labels },
       tooltip: this.buildSignedTooltip(unit, [
-        { name: 'Ingress', values: ingressDeltas },
-        { name: 'Egress', values: egressDeltas }
+        { name: 'Ingress', values: ingressDeltas, totals: ingressValues },
+        { name: 'Egress', values: egressDeltas, totals: egressValues }
       ])
     };
     const totalIngress = this.formatNumber(ingressValues.length ? ingressValues[ingressValues.length - 1] : 0);
@@ -262,10 +268,22 @@ export class AppComponent implements OnDestroy {
     this.bandwidthSummary = `Total Ingress: ${totalIngress} ${unit} · Total Egress: ${totalEgress} ${unit}`;
     this.bandwidthIngressTotal = `${totalIngress} ${unit}`;
     this.bandwidthEgressTotal = `${totalEgress} ${unit}`;
+    this.bandwidthIngressDeltaText = this.formatDelta(ingressValues, unit);
+    this.bandwidthEgressDeltaText = this.formatDelta(egressValues, unit);
   }
 
   private toDeltaSeries(values: number[]): number[] {
     return values.map((value, index) => index === 0 ? value : value - values[index - 1]);
+  }
+
+  private formatDelta(values: number[], unit: string): string {
+    if (values.length < 2) return `+${this.formatNumber(0)} ${unit} (+0.00%)`;
+    const previous = values[values.length - 2];
+    const current = values[values.length - 1];
+    const delta = current - previous;
+    const percent = previous ? (delta / previous) * 100 : 0;
+    const sign = delta >= 0 ? '+' : '';
+    return `${sign}${this.formatNumber(delta)} ${unit} (${sign}${percent.toFixed(2)}%)`;
   }
 
   private updateUptimeChart(): void {
@@ -275,6 +293,7 @@ export class AppComponent implements OnDestroy {
     this.uptimeChart = this.withData(this.uptimeChart, 'Uptime %', values, labels);
     const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 100;
     this.uptimeSummary = `Average: ${average.toFixed(2)}%`;
+    this.uptimeDeltaText = this.formatDelta(values, '%');
   }
 
   private percentChange(values: number[], index: number): number {
@@ -303,15 +322,18 @@ export class AppComponent implements OnDestroy {
     };
   }
 
-  private buildSignedTooltip(unit: string, series: { name: string; values: number[] }[]): ChartOptions['tooltip'] {
+  private buildSignedTooltip(unit: string, series: { name: string; values: number[]; totals?: number[] }[]): ChartOptions['tooltip'] {
     return {
       theme: 'dark',
       custom: ({ dataPointIndex }: { dataPointIndex: number }) => {
-        const rows = series.map(({ name, values }) => {
+        const rows = series.map(({ name, values, totals }) => {
           const delta = values[dataPointIndex] ?? 0;
           const sign = delta >= 0 ? '+' : '';
           const color = delta >= 0 ? '#c7f36b' : '#f4bb61';
-          return `<div style="margin-top:6px;"><strong>${name}:</strong> <span style="color:${color};">${sign}${this.formatNumber(delta)} ${unit}</span></div>`;
+          const totalLine = totals ? `<div>${this.formatNumber(totals[dataPointIndex] ?? 0)} ${unit}</div>` : '';
+          return `<div style="margin-top:6px;"><strong>${name}:</strong>`
+            + totalLine
+            + `<span style="color:${color};">${sign}${this.formatNumber(delta)} ${unit}</span></div>`;
         }).join('');
         return `<div style="padding:8px 10px;font:11px 'DM Mono',monospace;color:#e7ecee;background:#141b1f;border:1px solid #26323a;border-radius:6px;">${rows}</div>`;
       }

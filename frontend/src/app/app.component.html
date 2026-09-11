@@ -35,6 +35,7 @@
 			</div>
 			<div class="topbar-actions">
 				<span class="sync-time">Last sync {{ lastSync | date:'HH:mm:ss' }}</span>
+				<select class="auto-refresh-select" title="Auto-refresh" [value]="autoRefreshSeconds" (change)="selectAutoRefresh($any($event.target).value)"><option value="0">Auto-refresh: Off</option><option value="5">Every 5s</option><option value="15">Every 15s</option><option value="30">Every 30s</option><option value="60">Every 1m</option><option value="300">Every 5m</option><option value="900">Every 15m</option></select>
 				<button class="icon-button" type="button" title="Refresh data" (click)="loadNodes(); loadOverview(true)">&#8635;</button>
 				<div class="avatar">JM</div>
 			</div>
@@ -56,22 +57,26 @@
 			<article class="metric-card accent-lime">
 				<div class="metric-heading"><span>Storage</span><span class="metric-symbol">#</span></div>
 				<strong>{{ storageSummary }}</strong>
-				<div class="metric-foot"><span class="positive">{{ storageInterval }}</span><span>latest point</span></div>
+				<div class="metric-window">últimos {{ storageInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ storageDeltaText }}</span></div>
 			</article>
 			<article class="metric-card accent-amber">
 				<div class="metric-heading"><span>Trash</span><span class="metric-symbol">#</span></div>
 				<strong>{{ trashSummary }}</strong>
-				<div class="metric-foot"><span class="positive">{{ trashInterval }}</span><span>latest point</span></div>
+				<div class="metric-window">últimos {{ trashInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ trashDeltaText }}</span></div>
 			</article>
 			<article class="metric-card accent-cyan">
 				<div class="metric-heading"><span>Bandwidth</span><span class="metric-symbol">#</span></div>
 				<div class="bandwidth-split"><div><span>Ingress</span><strong>{{ bandwidthIngressTotal }}</strong></div><div><span>Egress</span><strong>{{ bandwidthEgressTotal }}</strong></div></div>
-				<div class="metric-foot"><span class="positive">{{ bandwidthInterval }}</span><span>total in range</span></div>
+				<div class="metric-window">últimos {{ bandwidthInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ bandwidthIngressDeltaText }}</span><span class="positive">{{ bandwidthEgressDeltaText }}</span></div>
 			</article>
 			<article class="metric-card accent-blue">
 				<div class="metric-heading"><span>Availability</span><span class="metric-symbol">%</span></div>
 				<strong>{{ uptimeSummary }}</strong>
-				<div class="metric-foot"><span class="positive">{{ uptimeInterval }}</span><span>average in range</span></div>
+				<div class="metric-window">últimos {{ uptimeInterval }}:</div>
+				<div class="metric-foot"><span class="positive">{{ uptimeDeltaText }}</span></div>
 			</article>
 		</section>
 

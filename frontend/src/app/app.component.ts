@@ -261,8 +261,8 @@ export class AppComponent implements OnDestroy {
     const unit = this.resolveUnit(this.bandwidthUnit, Math.max(this.representativeBytes(rawIngress), this.representativeBytes(rawEgress)));
     const ingressValues = rawIngress.map(bytes => this.toUnit(bytes, unit));
     const egressValues = rawEgress.map(bytes => this.toUnit(bytes, unit));
-    const ingressDeltas = this.toDeltaSeries(ingressValues);
-    const egressDeltas = this.toDeltaSeries(egressValues);
+    const ingressDeltas = this.toBandwidthDeltaSeries(ingressValues);
+    const egressDeltas = this.toBandwidthDeltaSeries(egressValues).map(v => -v); // Invert egress
     this.bandwidthChart = {
       ...this.bandwidthChart,
       series: [
@@ -272,7 +272,7 @@ export class AppComponent implements OnDestroy {
       xaxis: { ...this.bandwidthChart.xaxis, categories: labels },
       tooltip: this.buildSignedTooltip(unit, [
         { name: 'Ingress', values: ingressDeltas, totals: ingressValues },
-        { name: 'Egress', values: egressDeltas, totals: egressValues }
+        { name: 'Egress', values: egressDeltas.map(v => -v), totals: egressValues }
       ])
     };
     const totalIngress = this.formatNumber(ingressValues.length ? ingressValues[ingressValues.length - 1] : 0);
@@ -286,6 +286,10 @@ export class AppComponent implements OnDestroy {
 
   private toDeltaSeries(values: number[]): number[] {
     return values.map((value, index) => index === 0 ? value : value - values[index - 1]);
+  }
+
+  private toBandwidthDeltaSeries(values: number[]): number[] {
+    return values.map((value, index) => index === 0 ? 0 : value - values[index - 1]);
   }
 
   private formatDelta(values: number[], unit: string): string {

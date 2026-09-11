@@ -11,6 +11,7 @@ public record StorjNodeResponse(
         Long availableDiskSpace,
         Long usedDiskSpace,
         Long totalDiskSpace,
+        String color,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {

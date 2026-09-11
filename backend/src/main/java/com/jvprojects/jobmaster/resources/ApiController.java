@@ -156,6 +156,7 @@ public class ApiController {
                 node.getAvailableDiskSpace(),
                 usedDiskSpace,
                 totalDiskSpace,
+                node.getColor(),
                 node.getCreatedAt(),
                 node.getUpdatedAt()
         );

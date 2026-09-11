@@ -27,6 +27,8 @@ public class StorjNode extends BaseEntity {
     @Column
     private Long availableDiskSpace;
 
+    @Column
+    private String color;
 
 }
 

@@ -90,11 +90,11 @@
 		<section class="section-heading" *ngIf="activeView === 'Nodes'"><div><p class="eyebrow">Nodes</p><h3>Registered Storj nodes</h3></div><span class="job-summary">{{ nodes.length }} registered</span></section>
 		<section class="node-grid" *ngIf="activeView === 'Nodes'">
 			<article class="node-card" *ngFor="let node of nodes">
-				<div class="node-card-top"><div class="node-avatar" [ngClass]="node.accent">S</div><div><h4>{{ node.name }}</h4><span class="node-id">{{ node.id }}</span></div><span class="node-status" [class.degraded-status]="node.status === 'Degraded'"><i></i>{{ node.status }}</span></div>
+				<div class="node-card-top"><div class="node-avatar" [style.background]="node.color">S</div><div><h4>{{ node.name }}</h4><span class="node-id">{{ node.id }}</span></div><span class="node-status" [class.degraded-status]="node.status === 'Degraded'"><i></i>{{ node.status }}</span></div>
 				<div class="node-url">{{ node.url }} <span>...</span></div>
 				<div class="node-stats"><div><span>Used disk</span><strong>{{ formatValue(node.usedDiskSpace) }}</strong></div><div><span>Total disk</span><strong>{{ formatValue(node.totalDiskSpace) }}</strong></div></div>
 				<div class="storage-row"><div><span>Available disk space</span><strong>{{ formatValue(node.availableDiskSpace) }}</strong></div><span>{{ diskUsage(node) }}%</span></div>
-				<div class="progress"><span [style.width.%]="diskUsage(node)" [class]="node.accent"></span></div>
+				<div class="progress"><span [style.width.%]="diskUsage(node)" [style.background]="node.color"></span></div>
 				<div class="payout-grid"><div><span>Current month</span><strong>Not available</strong></div><div><span>Previous month</span><strong>Not available</strong></div><div><span>Total</span><strong>Not available</strong></div></div>
 				<div class="node-link">Registered node <span>DB</span></div>
 			</article>

@@ -16,6 +16,7 @@ interface NodeResponse {
   availableDiskSpace: number | null;
   usedDiskSpace: number | null;
   totalDiskSpace: number | null;
+  color: string | null;
 }
 
 interface NodeCard {
@@ -26,7 +27,7 @@ interface NodeCard {
   availableDiskSpace: number | null;
   usedDiskSpace: number | null;
   totalDiskSpace: number | null;
-  accent: string;
+  color: string;
 }
 
 interface OverviewPoint {
@@ -415,7 +416,7 @@ export class AppComponent implements OnDestroy {
   public loadNodes(): void {
     this.http.get<NodeResponse[]>('/api/job/nodes').subscribe({
       next: (nodes) => {
-        this.nodes = nodes.map((node, index) => ({
+        this.nodes = nodes.map(node => ({
           name: `Node ${(node.nodeId || node.id).slice(0, 8)}`,
           id: node.nodeId || node.id,
           url: node.url,
@@ -423,7 +424,7 @@ export class AppComponent implements OnDestroy {
           availableDiskSpace: node.availableDiskSpace,
           usedDiskSpace: node.usedDiskSpace,
           totalDiskSpace: node.totalDiskSpace,
-          accent: ['lime', 'cyan', 'amber'][index % 3]
+          color: node.color ?? '#83a9ff'
         }));
         this.lastSync = new Date();
       },

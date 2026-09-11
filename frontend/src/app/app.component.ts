@@ -101,7 +101,7 @@ export class AppComponent implements OnDestroy {
   public storageChart = this.createChart('#c7f36b', 'Storage used');
   public trashChart = this.createChart('#f4bb61', 'Trash');
   public bandwidthChart = { ...this.createChart('#5bd6e8', 'Bandwidth'), colors: ['#34d399', '#fb7185'] }; // Ingress (in) / Egress (out)
-  public payoutChart = this.createChart('#1dd1a1', 'Estimated Payout');
+  public payoutChart = this.createChart('#1dd1a1', 'Valor a receber');
   public uptimeChart = this.createChart('#83a9ff', 'Uptime %');
   public nodes: NodeCard[] = [];
   public payoutSummary = '';
@@ -423,26 +423,27 @@ export class AppComponent implements OnDestroy {
 
   private updatePayoutChart(): void {
     const data = this.overviewFor(this.payoutInterval, this.payoutRange);
-    // estimatedPayout is carried straight from the estimated-payout API, which reports
-    // cents - convert to dollars here, for display only.
-    const rawValues = data.data.map(point => point.estimatedPayout ?? 0);
     const unit = 'USD';
+
+    // The chart plots currentMonthPayout - the actual payout accrued so far this month
+    // ("valor a receber") - not the projection. Same cents source, converted for display.
+    const rawValues = data.data.map(point => point.currentMonthPayout ?? 0);
     const values = rawValues.map(val => (typeof val === 'number' ? val : parseFloat(String(val))) / 100);
     const displayValues = values.slice(-this.payoutRange);
     const displayLabels = data.data.slice(-this.payoutRange).map(point => this.formatLabel(point.label, this.payoutInterval));
-    this.payoutChart = this.withData(this.payoutChart, 'Estimated Payout', displayValues, displayLabels);
+    this.payoutChart = this.withData(this.payoutChart, 'Valor a receber', displayValues, displayLabels);
     const latest = displayValues.length ? displayValues[displayValues.length - 1] : 0;
-    this.payoutSummary = `US$ ${latest.toFixed(2)}`;
-    this.payoutDeltaText = this.formatDelta(displayValues, unit);
+    this.currentPayoutSummary = `US$ ${latest.toFixed(2)}`;
+    this.currentPayoutDeltaText = this.formatDelta(displayValues, unit);
 
-    // currentMonthPayout is the actual payout accrued so far this month (as opposed to
-    // estimatedPayout, which is Storj's projection for the full month) - same cents source.
-    const rawCurrentValues = data.data.map(point => point.currentMonthPayout ?? 0);
-    const currentValues = rawCurrentValues.map(val => (typeof val === 'number' ? val : parseFloat(String(val))) / 100);
-    const displayCurrentValues = currentValues.slice(-this.payoutRange);
-    const latestCurrent = displayCurrentValues.length ? displayCurrentValues[displayCurrentValues.length - 1] : 0;
-    this.currentPayoutSummary = `US$ ${latestCurrent.toFixed(2)}`;
-    this.currentPayoutDeltaText = this.formatDelta(displayCurrentValues, unit);
+    // estimatedPayout is Storj's own projection for the full month - kept as a headline
+    // number on the "Estimado" card only, with no dedicated chart of its own.
+    const rawEstimatedValues = data.data.map(point => point.estimatedPayout ?? 0);
+    const estimatedValues = rawEstimatedValues.map(val => (typeof val === 'number' ? val : parseFloat(String(val))) / 100);
+    const displayEstimatedValues = estimatedValues.slice(-this.payoutRange);
+    const latestEstimated = displayEstimatedValues.length ? displayEstimatedValues[displayEstimatedValues.length - 1] : 0;
+    this.payoutSummary = `US$ ${latestEstimated.toFixed(2)}`;
+    this.payoutDeltaText = this.formatDelta(displayEstimatedValues, unit);
   }
 
   private updateUptimeChart(): void {

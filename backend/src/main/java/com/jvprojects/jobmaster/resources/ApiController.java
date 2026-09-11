@@ -32,6 +32,18 @@ public class ApiController {
         this.storjSnoSecondRepository = storjSnoSecondRepository;
     }
 
+    private static class BandwidthState {
+        java.time.LocalDate lastDay;
+        long lastValue;
+        long accumulated;
+
+        BandwidthState() {
+            this.lastDay = null;
+            this.lastValue = 0;
+            this.accumulated = 0;
+        }
+    }
+
     @GetMapping("/nodes")
     public List<StorjNodeResponse> nodes() {
         return storjNodeRepository.findAll().stream()
@@ -49,6 +61,8 @@ public class ApiController {
         List<OverviewResponse.Point> resultPoints = new ArrayList<>();
         Long firstStorage = null;
         Long firstTrash = null;
+        java.util.Map<String, BandwidthState> ingressState = new java.util.HashMap<>();
+        java.util.Map<String, BandwidthState> egressState = new java.util.HashMap<>();
 
         for (int index = 0; index < points; index++) {
             OffsetDateTime bucketStart = start.plus(step.multipliedBy(index));
@@ -61,8 +75,8 @@ public class ApiController {
             Collection<StorjSnoSecond> latest = latestPerNode(bucket);
             long storage = sumOf(latest, StorjSnoSecond::getUsedDiskSpace);
             long trash = sumOf(latest, StorjSnoSecond::getTrashDiskSpace);
-            long ingress = sumOf(latest, StorjSnoSecond::getIngressTotal);
-            long egress = sumOf(latest, StorjSnoSecond::getEgressTotal);
+            long ingress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getIngressTotal, ingressState, bucketStart);
+            long egress = accumulateBandwidthWithDateDetection(latest, StorjSnoSecond::getEgressTotal, egressState, bucketStart);
             double uptime = weightedUptimeAverage(latest);
             if (firstStorage == null && storage > 0) firstStorage = storage;
             if (firstTrash == null && trash > 0) firstTrash = trash;
@@ -120,6 +134,32 @@ public class ApiController {
                 .collect(java.util.stream.Collectors.toMap(StorjSnoSecond::getNodeId, record -> record,
                         (left, right) -> left.getCreatedAt().isAfter(right.getCreatedAt()) ? left : right))
                 .values();
+    }
+
+    private long accumulateBandwidthWithDateDetection(Collection<StorjSnoSecond> records, Function<StorjSnoSecond, Long> valueExtractor,
+                                                     java.util.Map<String, BandwidthState> statePerNode,
+                                                     OffsetDateTime bucketStart) {
+        long total = 0;
+        java.time.LocalDate currentDay = bucketStart.toLocalDate();
+
+        for (StorjSnoSecond record : records) {
+            String nodeId = record.getNodeId();
+            long currentValue = valueExtractor.apply(record) == null ? 0 : valueExtractor.apply(record);
+            BandwidthState state = statePerNode.computeIfAbsent(nodeId, k -> new BandwidthState());
+
+            // Detect day change: when date changes, add previous day's value to accumulated
+            if (state.lastDay != null && !currentDay.isEqual(state.lastDay)) {
+                state.accumulated += state.lastValue;
+            }
+
+            // Update state for next iteration
+            state.lastDay = currentDay;
+            state.lastValue = currentValue;
+
+            total += state.accumulated + currentValue;
+        }
+
+        return total;
     }
 
     private long sumOf(Collection<StorjSnoSecond> records, Function<StorjSnoSecond, Long> value) {

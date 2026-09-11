@@ -122,17 +122,21 @@ export class AppComponent implements OnDestroy {
   private readonly chartKeys: readonly ChartKey[] = ['bandwidth', 'storage', 'payout', 'trash', 'uptime'];
   private sharedTimer?: ReturnType<typeof setInterval>;
   private uptimeTimer?: ReturnType<typeof setInterval>;
+  private bandwidth24hTimer?: ReturnType<typeof setInterval>;
 
   constructor(private readonly http: HttpClient) {
     this.loadNodes();
     this.loadOverview();
     this.scheduleSharedAutoRefresh();
     this.scheduleUptimeAutoRefresh();
+    this.loadBandwidth24hSummary();
+    this.bandwidth24hTimer = setInterval(() => this.loadBandwidth24hSummary(), 300_000);
   }
 
   ngOnDestroy(): void {
     if (this.sharedTimer) clearInterval(this.sharedTimer);
     if (this.uptimeTimer) clearInterval(this.uptimeTimer);
+    if (this.bandwidth24hTimer) clearInterval(this.bandwidth24hTimer);
   }
 
   public selectPayoutInterval(interval: Interval): void {
@@ -346,22 +350,51 @@ export class AppComponent implements OnDestroy {
         { name: 'Egress', values: displayEgressDeltas.map(v => -v), totals: displayEgressValues }
       ])
     };
+    // This total only spans whatever window/interval the chart happens to be showing right
+    // now, so it's a secondary, window-scoped figure - not the same as the fixed last-24h
+    // consumption shown on the Bandwidth metric card (see loadBandwidth24hSummary).
     const totalIngress = this.formatNumber(displayIngressValues.length ? displayIngressValues[displayIngressValues.length - 1] : 0);
     const totalEgress = this.formatNumber(displayEgressValues.length ? displayEgressValues[displayEgressValues.length - 1] : 0);
     this.bandwidthSummary = `Total Ingress: ${totalIngress} ${unit} · Total Egress: ${totalEgress} ${unit}`;
-    this.bandwidthIngressTotal = `${totalIngress} ${unit}`;
-    this.bandwidthEgressTotal = `${totalEgress} ${unit}`;
-    if (subMinute) {
-      const lastIngressDelta = displayIngressDeltas.length ? displayIngressDeltas[displayIngressDeltas.length - 1] : 0;
-      const lastEgressDelta = displayEgressDeltas.length ? -displayEgressDeltas[displayEgressDeltas.length - 1] : 0;
-      const prevIngress = displayIngressValues.length > 1 ? displayIngressValues[displayIngressValues.length - 2] : 0;
-      const prevEgress = displayEgressValues.length > 1 ? displayEgressValues[displayEgressValues.length - 2] : 0;
-      this.bandwidthIngressDeltaText = this.formatDeltaValue(lastIngressDelta, prevIngress, unit);
-      this.bandwidthEgressDeltaText = this.formatDeltaValue(lastEgressDelta, prevEgress, unit);
-    } else {
-      this.bandwidthIngressDeltaText = this.formatDelta(displayIngressValues, unit);
-      this.bandwidthEgressDeltaText = this.formatDelta(displayEgressValues, unit);
-    }
+  }
+
+  // The Bandwidth metric card is meant to answer "how much network usage in the last day",
+  // independent of whatever interval/range is currently selected for the chart below it - so
+  // it fetches its own fixed 49-hour window (49 hourly buckets = two adjacent 24h periods plus
+  // one extra point as the delta baseline) instead of reusing bandwidthInterval/bandwidthRange.
+  private loadBandwidth24hSummary(): void {
+    this.http.get<OverviewResponse>('/api/job/overview?interval=1h&points=49').subscribe({
+      next: (overview) => {
+        const points = overview.data;
+        const end = points.length - 1;
+        if (end < 1) return;
+        const dayAgo = Math.max(0, end - 24);
+        const twoDaysAgo = Math.max(0, end - 48);
+
+        const nowIngress = points[end].ingressTotal ?? 0;
+        const dayAgoIngress = points[dayAgo].ingressTotal ?? 0;
+        const twoDaysAgoIngress = points[twoDaysAgo].ingressTotal ?? 0;
+        const nowEgress = points[end].egressTotal ?? 0;
+        const dayAgoEgress = points[dayAgo].egressTotal ?? 0;
+        const twoDaysAgoEgress = points[twoDaysAgo].egressTotal ?? 0;
+
+        const last24hIngressBytes = nowIngress - dayAgoIngress;
+        const prev24hIngressBytes = dayAgoIngress - twoDaysAgoIngress;
+        const last24hEgressBytes = nowEgress - dayAgoEgress;
+        const prev24hEgressBytes = dayAgoEgress - twoDaysAgoEgress;
+
+        const unit = this.resolveUnit(this.bandwidthUnit, Math.max(Math.abs(last24hIngressBytes), Math.abs(last24hEgressBytes)));
+        const last24hIngress = this.toUnit(last24hIngressBytes, unit);
+        const last24hEgress = this.toUnit(last24hEgressBytes, unit);
+        const prev24hIngress = this.toUnit(prev24hIngressBytes, unit);
+        const prev24hEgress = this.toUnit(prev24hEgressBytes, unit);
+
+        this.bandwidthIngressTotal = `${this.formatNumber(last24hIngress)} ${unit}`;
+        this.bandwidthEgressTotal = `${this.formatNumber(last24hEgress)} ${unit}`;
+        this.bandwidthIngressDeltaText = this.formatDeltaValue(last24hIngress - prev24hIngress, prev24hIngress, unit);
+        this.bandwidthEgressDeltaText = this.formatDeltaValue(last24hEgress - prev24hEgress, prev24hEgress, unit);
+      }
+    });
   }
 
   private toDeltaSeries(values: number[]): number[] {

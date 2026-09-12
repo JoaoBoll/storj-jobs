@@ -1,4 +1,4 @@
-🇺🇸 Read in English | **🇧🇷 [Ler em Português](README.pt-BR.md)**
+**🇧🇷 [Ler em Português](README.pt-BR.md)**
 
 # Storj Jobs
 

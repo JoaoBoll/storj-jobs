@@ -1,6 +1,6 @@
 **🇺🇸 [Read in English](README.md)**
 
-# Storj Jobs
+# Storj Board
 
 Aplicação para monitorar nós (storage nodes) do [Storj](https://www.storj.io/), coletando periodicamente dados de bandwidth, storage, satélites e payout estimado direto da API de dashboard do(s) nó(s) configurado(s), e exibindo tudo em um painel web.
 
@@ -24,8 +24,8 @@ O `backend` roda um job (Quartz) a cada 5 segundos que consulta a API de dashboa
 
 1. Clone o repositório e entre na pasta:
    ```bash
-   git clone git@github.com:JoaoBoll/storj-jobs.git
-   cd storj-jobs
+   git clone git@github.com:JoaoBoll/storj-board.git
+   cd storj-board
    ```
 
 2. Configure o arquivo `.env` na raiz do projeto (já existe um de exemplo — ajuste os valores, principalmente `database_password` e `urls`):
@@ -102,7 +102,7 @@ npm start   # ng serve, porta 4200
 ## Estrutura do projeto
 
 ```
-storj-jobs/
+storj-board/
 ├── docker-compose.yml
 ├── .env
 ├── backend/     # Spring Boot (Java 21) — coleta e expõe os dados via API REST
